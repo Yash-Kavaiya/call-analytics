@@ -30,9 +30,6 @@ export default function RootLayout({
                 </div>
                 <div className="hidden md:block">
                   <div className="ml-10 flex items-baseline space-x-4">
-                    <Link href="/features" className="text-neutral-600 hover:text-neutral-900 px-3 py-2 rounded-md text-sm font-medium">
-                      Features
-                    </Link>
                     <Link href="/analytics" className="text-neutral-600 hover:text-neutral-900 px-3 py-2 rounded-md text-sm font-medium">
                       Analytics
                     </Link>

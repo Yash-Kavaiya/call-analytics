@@ -1,6 +1,42 @@
 'use client';
 
-import { BarChart, LineChart, PieChart, Activity, Clock, Users, Phone } from 'lucide-react';
+import { BarChart as BarChartIcon, LineChart as LineChartIcon, PieChart as PieChartIcon, Activity, Clock, Users, Phone } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+
+// Mock data for charts
+const lineChartData = [
+  { name: 'Mon', calls: 120 },
+  { name: 'Tue', calls: 150 },
+  { name: 'Wed', calls: 180 },
+  { name: 'Thu', calls: 140 },
+  { name: 'Fri', calls: 160 },
+  { name: 'Sat', calls: 90 },
+  { name: 'Sun', calls: 70 },
+];
+
+const durationData = [
+  { duration: '0-2min', calls: 250 },
+  { duration: '2-5min', calls: 400 },
+  { duration: '5-10min', calls: 300 },
+  { duration: '10-15min', calls: 200 },
+  { duration: '15min+', calls: 100 },
+];
+
+const sentimentData = [
+  { name: 'Positive', value: 60 },
+  { name: 'Neutral', value: 25 },
+  { name: 'Negative', value: 15 },
+];
+
+const topicData = [
+  { topic: 'Support', count: 450 },
+  { topic: 'Sales', count: 380 },
+  { topic: 'Billing', count: 320 },
+  { topic: 'Technical', count: 280 },
+  { topic: 'Other', count: 120 },
+];
+
+const COLORS = ['#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe'];
 
 export default function Dashboard() {
   return (
@@ -56,40 +92,82 @@ export default function Dashboard() {
         <ChartCard
           title="Call Volume Trends"
           subtitle="Daily call volume over time"
-          icon={<LineChart className="h-5 w-5" />}
+          icon={<LineChartIcon className="h-5 w-5" />}
         >
-          <div className="h-80 bg-neutral-50 rounded-lg flex items-center justify-center">
-            Chart placeholder
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={lineChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="calls" stroke="#8b5cf6" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </ChartCard>
 
         <ChartCard
           title="Call Duration Distribution"
           subtitle="Distribution of call lengths"
-          icon={<BarChart className="h-5 w-5" />}
+          icon={<BarChartIcon className="h-5 w-5" />}
         >
-          <div className="h-80 bg-neutral-50 rounded-lg flex items-center justify-center">
-            Chart placeholder
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={durationData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="duration" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="calls" fill="#8b5cf6" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </ChartCard>
 
         <ChartCard
           title="Sentiment Analysis"
           subtitle="Customer sentiment distribution"
-          icon={<PieChart className="h-5 w-5" />}
+          icon={<PieChartIcon className="h-5 w-5" />}
         >
-          <div className="h-80 bg-neutral-50 rounded-lg flex items-center justify-center">
-            Chart placeholder
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={sentimentData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {sentimentData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
         </ChartCard>
 
         <ChartCard
           title="Topic Distribution"
           subtitle="Common topics in conversations"
-          icon={<BarChart className="h-5 w-5" />}
+          icon={<BarChartIcon className="h-5 w-5" />}
         >
-          <div className="h-80 bg-neutral-50 rounded-lg flex items-center justify-center">
-            Chart placeholder
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={topicData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="topic" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count" fill="#8b5cf6" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </ChartCard>
       </div>
