@@ -89,7 +89,7 @@ export default function Dashboard() {
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-gray-50">
-      <div className="p-8 pt-24 max-w-7xl mx-auto">
+      <div className="p-8 pt-20 max-w-7xl mx-auto"> {/* Changed pt-24 to pt-20 to match navbar height */}
         {/* Page Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
