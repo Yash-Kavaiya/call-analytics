@@ -195,24 +195,24 @@ async function analyzeWithGemini(model: any, prompt: string) {
       topK: 40,
       maxOutputTokens: 8192,
     },
-    safetySettings: [
-      {
-        category: HarmCategory.HARASSMENT,
-        threshold: HarmBlockThreshold.MEDIUM_AND_ABOVE,
-      },
-      {
-        category: HarmCategory.HATE_SPEECH,
-        threshold: HarmBlockThreshold.MEDIUM_AND_ABOVE,
-      },
-      {
-        category: HarmCategory.SEXUALLY_EXPLICIT,
-        threshold: HarmBlockThreshold.MEDIUM_AND_ABOVE,
-      },
-      {
-        category: HarmCategory.DANGEROUS_CONTENT,
-        threshold: HarmBlockThreshold.MEDIUM_AND_ABOVE,
-      },
-    ],
+    // safetySettings: [
+    //   {
+    //     category: HarmCategory.HARASSMENT,
+    //     threshold: HarmBlockThreshold.MEDIUM_AND_ABOVE,
+    //   },
+    //   {
+    //     category: HarmCategory.HATE_SPEECH,
+    //     threshold: HarmBlockThreshold.MEDIUM_AND_ABOVE,
+    //   },
+    //   {
+    //     category: HarmCategory.SEXUALLY_EXPLICIT,
+    //     threshold: HarmBlockThreshold.MEDIUM_AND_ABOVE,
+    //   },
+    //   {
+    //     category: HarmCategory.DANGEROUS_CONTENT,
+    //     threshold: HarmBlockThreshold.MEDIUM_AND_ABOVE,
+    //   },
+    // ],
   });
 
   const result = await chat.sendMessage(prompt);

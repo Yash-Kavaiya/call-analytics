@@ -199,7 +199,14 @@ export default function Features() {
   );
 }
 
-function FeatureTab({ icon: Icon, label, active, onClick }) {
+interface FeatureTabProps {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}
+
+function FeatureTab({ icon: Icon, label, active, onClick }: FeatureTabProps) {
   return (
     <button 
       className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
@@ -215,7 +222,18 @@ function FeatureTab({ icon: Icon, label, active, onClick }) {
   );
 }
 
-function FeatureCard({ feature, index }) {
+interface Feature {
+  title: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+interface FeatureCardProps {
+  feature: Feature;
+  index: number;
+}
+
+function FeatureCard({ feature, index }: FeatureCardProps) {
   return (
     <div className="group relative bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-600 to-indigo-400 transform origin-left transition-transform duration-300 scale-x-0 group-hover:scale-x-100"></div>
@@ -252,7 +270,7 @@ const mainFeatures = [
   },
   {
     title: 'Performance Metrics',
-    description: 'Track team and individual performance with customizable KPIs that measure what matters most to your organization's success.',
+    description: 'Track team and individual performance with customizable KPIs that measure what matters most to your organization\'s success.',
     icon: BarChart2
   },
   {
@@ -283,7 +301,7 @@ const detailedFeatures = [
   },
   {
     title: 'Team Performance Optimization',
-    description: 'Transform your team's effectiveness with data-driven insights that identify coaching opportunities and celebrate successes.',
+    description: 'Transform your team\'s effectiveness with data-driven insights that identify coaching opportunities and celebrate successes.',
     icon: Users,
     linkText: 'team performance features',
     bullets: [
@@ -291,7 +309,7 @@ const detailedFeatures = [
       'AI-generated coaching suggestions based on successful conversation patterns',
       'Automated identification of best practices from top-performing team members',
       'Historical trend analysis to track improvement over time with visual progress indicators',
-      'Customizable scoring frameworks that align with your organization's unique goals'
+      'Customizable scoring frameworks that align with your organization\'s unique goals'
     ]
   },
   {

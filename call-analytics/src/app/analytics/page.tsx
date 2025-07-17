@@ -519,7 +519,15 @@ export default function Analytics() {
 }
 
 // Helper Components
-function OverviewCard({ title, value, icon, gradientFrom = "from-purple-600", gradientTo = "to-indigo-600" }) {
+interface OverviewCardProps {
+  title: string;
+  value: string;
+  icon: React.ReactNode;
+  gradientFrom?: string;
+  gradientTo?: string;
+}
+
+function OverviewCard({ title, value, icon, gradientFrom = "from-purple-600", gradientTo = "to-indigo-600" }: OverviewCardProps) {
   return (
     <div className="relative bg-white rounded-xl overflow-hidden transition-all duration-300 hover:shadow-md group">
       <div className={`absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${gradientFrom} ${gradientTo}`}></div>
@@ -536,7 +544,14 @@ function OverviewCard({ title, value, icon, gradientFrom = "from-purple-600", gr
   );
 }
 
-function AnalysisSection({ title, children, expanded, onToggle }) {
+interface AnalysisSectionProps {
+  title: string;
+  children: React.ReactNode;
+  expanded: boolean;
+  onToggle: () => void;
+}
+
+function AnalysisSection({ title, children, expanded, onToggle }: AnalysisSectionProps) {
   return (
     <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-md">
       <div 

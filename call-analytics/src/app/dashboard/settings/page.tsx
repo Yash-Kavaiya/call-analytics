@@ -28,14 +28,14 @@ import {
 } from 'lucide-react';
 
 export default function SettingsPage() {
-  const [notificationSettings, setNotificationSettings] = useState({
+  const [notificationSettings, setNotificationSettings] = useState<Record<string, boolean>>({
     emailAlerts: true,
     desktopNotifications: true,
     callSummaries: true,
     weeklyReports: false
   });
 
-  const [integrationStatus, setIntegrationStatus] = useState({
+  const [integrationStatus, setIntegrationStatus] = useState<Record<string, boolean>>({
     salesforce: true,
     hubspot: false,
     zendesk: true,
@@ -46,13 +46,13 @@ export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState('notifications');
   
   // Function to handle notification toggle changes
-  const handleNotificationChange = (key, value) => {
+  const handleNotificationChange = (key: string, value: boolean) => {
     setNotificationSettings(prev => ({ ...prev, [key]: value }));
     setHasChanges(true);
   };
   
   // Function to handle integration status changes
-  const handleIntegrationChange = (key) => {
+  const handleIntegrationChange = (key: string) => {
     setIntegrationStatus(prev => ({ ...prev, [key]: !prev[key] }));
     setHasChanges(true);
   };
@@ -396,7 +396,7 @@ function IntegrationItem({ service, status, onChange }: {
   status: boolean;
   onChange: () => void;
 }) {
-  const getServiceIcon = (serviceName) => {
+  const getServiceIcon = (serviceName: string) => {
     // This would ideally use actual service logos
     switch(serviceName.toLowerCase()) {
       case 'salesforce':
@@ -472,10 +472,10 @@ function SecurityItem({ title, description, icon, buttonText, buttonVariant }: {
 }
 
 // These components would be imported from a component library
-const MessageSquare = ({ className }) => {
+const MessageSquare = ({ className }: { className?: string }) => {
   return <div className={className}>📝</div>; // Simplified for the example
 };
 
-const MessageCircle = ({ className }) => {
+const MessageCircle = ({ className }: { className?: string }) => {
   return <div className={className}>💬</div>; // Simplified for the example
 };
