@@ -339,7 +339,15 @@ export default function UsersPage() {
   );
 }
 
-function ActivityCard({ title, value, change, trend, period }) {
+interface ActivityCardProps {
+  title: string;
+  value: string;
+  change: string;
+  trend: 'up' | 'down';
+  period: string;
+}
+
+function ActivityCard({ title, value, change, trend, period }: ActivityCardProps) {
   return (
     <div className="border border-gray-100 rounded-xl p-4 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all duration-200">
       <div className="flex justify-between items-start mb-4">

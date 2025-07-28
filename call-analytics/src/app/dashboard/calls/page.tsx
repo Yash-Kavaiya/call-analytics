@@ -20,9 +20,19 @@ import {
   Calendar
 } from 'lucide-react';
 
+interface CallData {
+  id: number;
+  phone: string;
+  date: string;
+  duration: string;
+  agent: string;
+  category: string;
+  sentiment: string;
+}
+
 export default function Calls() {
   const [filterOpen, setFilterOpen] = useState(false);
-  const [selectedCall, setSelectedCall] = useState(null);
+  const [selectedCall, setSelectedCall] = useState<CallData | null>(null);
 
   return (
     <div className="p-8 pt-24 bg-gradient-to-br from-indigo-50/40 to-gray-50 min-h-screen">
@@ -229,7 +239,12 @@ export default function Calls() {
   );
 }
 
-function CallDetails({ call, onBack }) {
+interface CallDetailsProps {
+  call: CallData;
+  onBack: () => void;
+}
+
+function CallDetails({ call, onBack }: CallDetailsProps) {
   // Audio player state
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
