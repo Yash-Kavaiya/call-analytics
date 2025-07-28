@@ -22,7 +22,7 @@ import { useState } from 'react';
 
 export default function Pricing() {
   const [isAnnual, setIsAnnual] = useState(true);
-  const [hoveredFeature, setHoveredFeature] = useState(null);
+  const [hoveredFeature, setHoveredFeature] = useState<string | null>(null);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50/40 to-gray-50 pt-20">
@@ -194,7 +194,7 @@ export default function Pricing() {
                         </td>
                         {pricingPlans.map((plan) => (
                           <td key={`${feature.name}-${plan.name}`} className="p-6 text-center">
-                            <FeatureValue value={feature.tiers[plan.name.toLowerCase()]} />
+                            <FeatureValue value={feature.tiers[plan.name.toLowerCase() as keyof typeof feature.tiers]} />
                           </td>
                         ))}
                       </tr>
@@ -233,7 +233,7 @@ export default function Pricing() {
 }
 
 // Feature value display component
-function FeatureValue({ value }) {
+function FeatureValue({ value }: { value: string }) {
   if (value === '✓') {
     return (
       <span className="inline-flex h-6 w-6 items-center justify-center bg-green-50 rounded-full text-green-600">
