@@ -1,417 +1,401 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { 
-  BarChart as BarChartIcon, 
-  LineChart as LineChartIcon, 
-  PieChart as PieChartIcon, 
-  Activity, 
-  Clock, 
-  Users, 
   Phone,
-  Download,
-  Calendar,
-  ChevronDown
+  Clock,
+  TrendingUp,
+  Star,
+  FileAudio,
+  ArrowRight,
+  Loader2,
+  Upload,
+  BarChart3,
 } from 'lucide-react';
+import Link from 'next/link';
 import { 
-  BarChart, 
-  Bar, 
+  AreaChart, 
+  Area, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer, 
-  LineChart, 
-  Line, 
-  PieChart, 
-  Pie, 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
   Cell,
-  Legend,
-  Area,
-  AreaChart 
 } from 'recharts';
-import { useState } from 'react';
 
-// Enhanced mock data for charts
-const lineChartData = [
-  { name: 'Mon', calls: 120, average: 90 },
-  { name: 'Tue', calls: 150, average: 95 },
-  { name: 'Wed', calls: 180, average: 100 },
-  { name: 'Thu', calls: 140, average: 105 },
-  { name: 'Fri', calls: 160, average: 100 },
-  { name: 'Sat', calls: 90, average: 85 },
-  { name: 'Sun', calls: 70, average: 80 },
-];
+interface DashboardStats {
+  totalCalls: number;
+  callsThisMonth: number;
+  avgDuration: number;
+  avgQualityScore: number;
+  sentimentDistribution: {
+    positive: number;
+    neutral: number;
+    negative: number;
+  };
+}
 
-const durationData = [
-  { duration: '0-2min', calls: 250, previous: 220 },
-  { duration: '2-5min', calls: 400, previous: 380 },
-  { duration: '5-10min', calls: 300, previous: 290 },
-  { duration: '10-15min', calls: 200, previous: 190 },
-  { duration: '15min+', calls: 100, previous: 110 },
-];
+interface RecentCall {
+  id: string;
+  fileName: string;
+  status: string;
+  sentiment?: string;
+  qualityScore?: number;
+  duration?: number;
+  createdAt: string;
+}
 
-const sentimentData = [
-  { name: 'Positive', value: 60 },
-  { name: 'Neutral', value: 25 },
-  { name: 'Negative', value: 15 },
-];
+interface TrendData {
+  date: string;
+  calls: number;
+}
 
-const topicData = [
-  { topic: 'Support', count: 450, previous: 420 },
-  { topic: 'Sales', count: 380, previous: 350 },
-  { topic: 'Billing', count: 320, previous: 300 },
-  { topic: 'Technical', count: 280, previous: 260 },
-  { topic: 'Other', count: 120, previous: 110 },
-];
-
-// Enhanced color palette
-const COLORS = {
-  primary: '#6366F1',
-  primaryLight: '#8183FF',
-  primaryDark: '#4F46E5',
-  secondary: '#F59E0B',
-  success: '#10B981',
-  danger: '#EF4444',
-  neutral: '#6B7280',
-  neutralLight: '#E5E7EB',
-  background: '#F9FAFB',
-  cardBg: '#FFFFFF',
-  text: '#1F2937',
-  textLight: '#6B7280',
-};
-
-const CHART_COLORS = ['#6366F1', '#8183FF', '#A5B4FC', '#C7D2FE', '#E0E7FF'];
-const SENTIMENT_COLORS = ['#10B981', '#94A3B8', '#EF4444'];
+const SENTIMENT_COLORS = ['#22c55e', '#6b7280', '#ef4444'];
 
 export default function Dashboard() {
-  const [timeRange, setTimeRange] = useState('7d');
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-gray-50">
-      <div className="p-8 pt-20 max-w-7xl mx-auto"> {/* Changed pt-24 to pt-20 to match navbar height */}
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-indigo-400">
-              Analytics Pro
-            </h1>
-            <p className="text-gray-500 mt-1">Comprehensive insights for your communication data</p>
-          </div>
-          <div className="flex gap-4 items-center">
-            <div className="relative">
-              <button 
-                className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-all"
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-              >
-                <Calendar className="h-4 w-4 text-indigo-500" />
-                {timeRange === '7d' && 'Last 7 days'}
-                {timeRange === '30d' && 'Last 30 days'}
-                {timeRange === '90d' && 'Last 90 days'}
-                <ChevronDown className="h-4 w-4 text-gray-400" />
-              </button>
-              
-              {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-10">
-                  <button 
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
-                    onClick={() => {
-                      setTimeRange('7d');
-                      setDropdownOpen(false);
-                    }}
-                  >
-                    Last 7 days
-                  </button>
-                  <button 
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
-                    onClick={() => {
-                      setTimeRange('30d');
-                      setDropdownOpen(false);
-                    }}
-                  >
-                    Last 30 days
-                  </button>
-                  <button 
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
-                    onClick={() => {
-                      setTimeRange('90d');
-                      setDropdownOpen(false);
-                    }}
-                  >
-                    Last 90 days
-                  </button>
-                </div>
-              )}
-            </div>
-            
-            <button className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-md hover:shadow-lg hover:from-indigo-500 hover:to-indigo-400 transition-all duration-300">
-              <Download className="h-4 w-4" />
-              Export Data
-            </button>
-          </div>
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [recentCalls, setRecentCalls] = useState<RecentCall[]>([]);
+  const [trends, setTrends] = useState<TrendData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchDashboardData() {
+      try {
+        const [summaryRes, callsRes, trendsRes] = await Promise.all([
+          fetch('/api/analytics/summary'),
+          fetch('/api/calls?limit=5'),
+          fetch('/api/analytics/trends?period=7'),
+        ]);
+
+        const summaryData = await summaryRes.json();
+        const callsData = await callsRes.json();
+        const trendsData = await trendsRes.json();
+
+        if (summaryData.success) {
+          setStats(summaryData.data);
+        }
+        if (callsData.success) {
+          setRecentCalls(callsData.data);
+        }
+        if (trendsData.success) {
+          setTrends(trendsData.data.daily);
+        }
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchDashboardData();
+  }, []);
+
+  const formatDuration = (seconds?: number): string => {
+    if (!seconds) return '0m 0s';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}m ${secs}s`;
+  };
+
+  const formatDate = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-8 pt-6 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mx-auto" />
+          <p className="text-gray-500 mt-2">Loading dashboard...</p>
         </div>
-          
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            title="Total Calls"
-            value="1,234"
-            change="+12%"
-            icon={<Phone className="h-5 w-5" />}
-            positive
-          />
-          <StatCard
-            title="Average Duration"
-            value="5m 23s"
-            change="-2%"
-            icon={<Clock className="h-5 w-5" />}
-            positive={false}
-          />
-          <StatCard
-            title="Active Users"
-            value="892"
-            change="+5%"
-            icon={<Users className="h-5 w-5" />}
-            positive
-          />
-          <StatCard
-            title="Engagement Score"
-            value="8.5"
-            change="+3%"
-            icon={<Activity className="h-5 w-5" />}
-            positive
-          />
+      </div>
+    );
+  }
+
+  const sentimentData = stats ? [
+    { name: 'Positive', value: stats.sentimentDistribution.positive },
+    { name: 'Neutral', value: stats.sentimentDistribution.neutral },
+    { name: 'Negative', value: stats.sentimentDistribution.negative },
+  ].filter(d => d.value > 0) : [];
+
+  const totalSentiment = sentimentData.reduce((sum, d) => sum + d.value, 0);
+
+  return (
+    <div className="p-8 pt-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-500 mt-1">Overview of your call analytics</p>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500">Total Calls</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.totalCalls || 0}</p>
+              <p className="text-sm text-gray-500 mt-1">{stats?.callsThisMonth || 0} this month</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center">
+              <Phone className="h-6 w-6 text-indigo-600" />
+            </div>
+          </div>
         </div>
 
-        {/* Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ChartCard
-            title="Call Volume Trends"
-            subtitle="Daily call volume with historical average"
-            icon={<LineChartIcon className="h-5 w-5" />}
-          >
-            <div className="h-80">
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500">Avg. Duration</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{formatDuration(stats?.avgDuration)}</p>
+              <p className="text-sm text-gray-500 mt-1">Per call</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center">
+              <Clock className="h-6 w-6 text-purple-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500">Quality Score</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.avgQualityScore || 0}/10</p>
+              <p className="text-sm text-gray-500 mt-1">Average</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-yellow-50 flex items-center justify-center">
+              <Star className="h-6 w-6 text-yellow-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500">Positive Calls</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {totalSentiment > 0 
+                  ? `${Math.round((stats?.sentimentDistribution.positive || 0) / totalSentiment * 100)}%`
+                  : '0%'
+                }
+              </p>
+              <p className="text-sm text-gray-500 mt-1">{stats?.sentimentDistribution.positive || 0} calls</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
+              <TrendingUp className="h-6 w-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Call Volume Chart */}
+        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Call Volume</h3>
+              <p className="text-sm text-gray-500">Last 7 days</p>
+            </div>
+            <Link 
+              href="/dashboard/analytics"
+              className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
+            >
+              View Details
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+          {trends.length > 0 ? (
+            <div className="h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={lineChartData}>
+                <AreaChart data={trends}>
                   <defs>
-                    <linearGradient id="colorCalls" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0}/>
+                    <linearGradient id="callsGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="name" tick={{fill: COLORS.textLight}} axisLine={false} />
-                  <YAxis tick={{fill: COLORS.textLight}} axisLine={false} />
-                  <Tooltip 
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis 
+                    dataKey="date" 
+                    tickFormatter={formatDate}
+                    tick={{ fontSize: 12, fill: '#6b7280' }}
+                  />
+                  <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} />
+                  <Tooltip
                     contentStyle={{
-                      borderRadius: '8px', 
-                      border: 'none',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-                      padding: '10px'
+                      backgroundColor: 'white',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
                     }}
+                    labelFormatter={formatDate}
                   />
-                  <Legend />
-                  <Area 
-                    type="monotone" 
-                    dataKey="calls" 
-                    stroke={COLORS.primary} 
-                    strokeWidth={3}
-                    fillOpacity={1}
-                    fill="url(#colorCalls)"
-                    activeDot={{ r: 8 }} 
-                    name="Current"
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="average" 
-                    stroke={COLORS.secondary} 
+                  <Area
+                    type="monotone"
+                    dataKey="calls"
+                    stroke="#6366f1"
                     strokeWidth={2}
-                    strokeDasharray="5 5"
-                    dot={false}
-                    name="Historical Average"
+                    fill="url(#callsGradient)"
+                    name="Calls"
                   />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-          </ChartCard>
-
-          <ChartCard
-            title="Call Duration Distribution"
-            subtitle="Length of calls compared to previous period"
-            icon={<BarChartIcon className="h-5 w-5" />}
-          >
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={durationData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="duration" tick={{fill: COLORS.textLight}} axisLine={false} />
-                  <YAxis tick={{fill: COLORS.textLight}} axisLine={false} />
-                  <Tooltip 
-                    contentStyle={{
-                      borderRadius: '8px', 
-                      border: 'none',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-                      padding: '10px'
-                    }}
-                  />
-                  <Legend />
-                  <Bar 
-                    dataKey="calls" 
-                    fill={COLORS.primary} 
-                    radius={[4, 4, 0, 0]} 
-                    name="Current Period"
-                  />
-                  <Bar 
-                    dataKey="previous" 
-                    fill={COLORS.neutralLight} 
-                    radius={[4, 4, 0, 0]} 
-                    name="Previous Period"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+          ) : (
+            <div className="h-[250px] flex items-center justify-center text-gray-400">
+              <div className="text-center">
+                <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>No data available yet</p>
+              </div>
             </div>
-          </ChartCard>
+          )}
+        </div>
 
-          <ChartCard
-            title="Sentiment Analysis"
-            subtitle="Customer sentiment distribution"
-            icon={<PieChartIcon className="h-5 w-5" />}
+        {/* Sentiment Distribution */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-1">Sentiment</h3>
+          <p className="text-sm text-gray-500 mb-4">Distribution</p>
+          {sentimentData.length > 0 ? (
+            <>
+              <div className="h-[180px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={sentimentData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={70}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {sentimentData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={SENTIMENT_COLORS[index]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-2 mt-4">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                    <span className="text-gray-600">Positive</span>
+                  </div>
+                  <span className="font-medium">{stats?.sentimentDistribution.positive || 0}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-gray-500" />
+                    <span className="text-gray-600">Neutral</span>
+                  </div>
+                  <span className="font-medium">{stats?.sentimentDistribution.neutral || 0}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                    <span className="text-gray-600">Negative</span>
+                  </div>
+                  <span className="font-medium">{stats?.sentimentDistribution.negative || 0}</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="h-[250px] flex items-center justify-center text-gray-400">
+              <div className="text-center">
+                <TrendingUp className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>No sentiment data yet</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Recent Calls */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Recent Calls</h3>
+            <p className="text-sm text-gray-500">Latest uploaded and processed calls</p>
+          </div>
+          <Link 
+            href="/dashboard/calls"
+            className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
           >
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={sentimentData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={70}
-                    outerRadius={100}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {sentimentData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={SENTIMENT_COLORS[index % SENTIMENT_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value) => [`${value}%`, 'Percentage']}
-                    contentStyle={{
-                      borderRadius: '8px', 
-                      border: 'none',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-                      padding: '10px'
-                    }}
-                  />
-                  <Legend 
-                    formatter={(value, entry, index) => (
-                      <span className="text-sm font-medium" style={{ color: COLORS.text }}>
-                        {value}: {sentimentData[index].value}%
+            View All
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        {recentCalls.length === 0 ? (
+          <div className="p-12 text-center">
+            <FileAudio className="h-12 w-12 text-gray-300 mx-auto" />
+            <p className="text-gray-500 mt-3">No calls uploaded yet</p>
+            <p className="text-sm text-gray-400 mb-4">Upload your first call to get started</p>
+            <Link
+              href="/dashboard/files"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+            >
+              <Upload className="h-4 w-4" />
+              Upload Calls
+            </Link>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {recentCalls.map((call) => (
+              <div key={call.id} className="p-4 hover:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                    <FileAudio className="h-5 w-5 text-indigo-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{call.fileName}</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(call.createdAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {call.sentiment && (
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        call.sentiment === 'positive' ? 'bg-green-50 text-green-700' :
+                        call.sentiment === 'negative' ? 'bg-red-50 text-red-700' :
+                        'bg-gray-50 text-gray-700'
+                      }`}>
+                        {call.sentiment}
                       </span>
                     )}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </ChartCard>
-
-          <ChartCard
-            title="Topic Distribution"
-            subtitle="Common topics in conversations"
-            icon={<BarChartIcon className="h-5 w-5" />}
-          >
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart 
-                  data={topicData}
-                  layout="vertical"
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={true} vertical={false} />
-                  <XAxis type="number" tick={{fill: COLORS.textLight}} axisLine={false} />
-                  <YAxis 
-                    dataKey="topic" 
-                    type="category" 
-                    tick={{fill: COLORS.text}} 
-                    axisLine={false}
-                    width={80}
-                  />
-                  <Tooltip 
-                    contentStyle={{
-                      borderRadius: '8px', 
-                      border: 'none',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-                      padding: '10px'
-                    }}
-                  />
-                  <Legend />
-                  <Bar 
-                    dataKey="count" 
-                    name="Current Period" 
-                    fill={COLORS.primary}
-                    radius={[0, 4, 4, 0]} 
-                  />
-                  <Bar 
-                    dataKey="previous" 
-                    name="Previous Period" 
-                    fill={COLORS.neutralLight}
-                    radius={[0, 4, 4, 0]} 
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </ChartCard>
-        </div>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      call.status === 'completed' ? 'bg-green-50 text-green-700' :
+                      call.status === 'failed' ? 'bg-red-50 text-red-700' :
+                      'bg-indigo-50 text-indigo-700'
+                    }`}>
+                      {call.status}
+                    </span>
+                  </div>
+                  {call.status === 'completed' && (
+                    <Link
+                      href={`/dashboard/calls/${call.id}`}
+                      className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+                    >
+                      View
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-    </div>
-  );
-}
-
-function StatCard({ title, value, change, icon, positive }: {
-  title: string;
-  value: string;
-  change: string;
-  icon: React.ReactNode;
-  positive: boolean;
-}) {
-  return (
-    <div className="bg-white p-6 rounded-xl border border-gray-100 hover:shadow-xl transition-all duration-300 group">
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-gray-500 font-medium">{title}</span>
-        <div className="p-2.5 bg-indigo-50 rounded-lg group-hover:bg-indigo-100 transition-colors duration-300">
-          <span className="text-indigo-600">{icon}</span>
-        </div>
-      </div>
-      <div className="flex items-baseline justify-between">
-        <span className="text-2xl font-bold text-gray-900">{value}</span>
-        <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${
-          positive 
-            ? 'bg-green-50 text-green-600' 
-            : 'bg-red-50 text-red-600'
-        }`}>
-          {change}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function ChartCard({ title, subtitle, icon, children }: {
-  title: string;
-  subtitle: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="bg-white p-6 rounded-xl border border-gray-100 hover:shadow-xl transition-all duration-300">
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-          <p className="text-sm text-gray-500">{subtitle}</p>
-        </div>
-        <div className="p-2.5 bg-indigo-50 rounded-lg">
-          <span className="text-indigo-600">{icon}</span>
-        </div>
-      </div>
-      {children}
     </div>
   );
 }

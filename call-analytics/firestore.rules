@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Helper function to get user's organization ID
+    function getUserOrgId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId;
+    }
+    
+    // Helper function to check if user belongs to organization
+    function belongsToOrg(orgId) {
+      return isAuthenticated() && getUserOrgId() == orgId;
+    }
+    
+    // Helper function to check user role in organization
+    function hasRole(orgId, roles) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role in roles;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Users can read their own document
+      allow read: if isOwner(userId);
+      
+      // Users can update their own document (limited fields)
+      allow update: if isOwner(userId) && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'avatar', 'updatedAt']);
+      
+      // Only server can create/delete users
+      allow create, delete: if false;
+    }
+    
+    // Organizations collection
+    match /organizations/{orgId} {
+      // Members can read their organization
+      allow read: if belongsToOrg(orgId);
+      
+      // Only owners and admins can update organization
+      allow update: if hasRole(orgId, ['owner', 'admin']) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'updatedAt']);
+      
+      // Only server can create/delete organizations
+      allow create, delete: if false;
+      
+      // Organization members subcollection
+      match /members/{memberId} {
+        // Members can read all members in their org
+        allow read: if belongsToOrg(orgId);
+        
+        // Only owners can add/remove members
+        allow write: if hasRole(orgId, ['owner']);
+      }
+      
+      // Calls subcollection
+      match /calls/{callId} {
+        // Members can read calls in their org
+        allow read: if belongsToOrg(orgId);
+        
+        // Members can create calls
+        allow create: if belongsToOrg(orgId);
+        
+        // Only the agent who created or admins can update
+        allow update: if belongsToOrg(orgId) && 
+          (resource.data.agentId == request.auth.uid || hasRole(orgId, ['owner', 'admin']));
+        
+        // Only owners and admins can delete
+        allow delete: if hasRole(orgId, ['owner', 'admin']);
+      }
+    }
+  }
+}

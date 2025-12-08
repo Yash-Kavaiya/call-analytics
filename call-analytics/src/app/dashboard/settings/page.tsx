@@ -1,481 +1,684 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 import {
+  User,
+  Building2,
   Bell,
-  Key,
-  Globe,
   Shield,
-  Database,
-  Sliders,
-  CheckCircle,
-  XCircle,
+  Loader2,
   Save,
-  ChevronLeft,
-  ChevronRight,
-  Zap,
-  Lock,
-  FileText,
-  Cloud,
-  Clock,
-  AlertCircle,
-  Smartphone,
-  Mail,
-  BarChart2,
-  RefreshCw,
-  Settings,
-  ArrowRight
+  Trash2,
+  Eye,
+  EyeOff,
+  AlertTriangle,
+  Check,
+  Copy,
 } from 'lucide-react';
 
+type TabType = 'profile' | 'organization' | 'notifications' | 'security';
+
+interface ProfileData {
+  id: string;
+  email: string;
+  name: string;
+  avatar?: string;
+  notifications: {
+    email: boolean;
+    callProcessed: boolean;
+    weeklyReport: boolean;
+    usageAlerts: boolean;
+  };
+  createdAt: string | null;
+}
+
+interface OrgData {
+  id: string;
+  name: string;
+  plan: string;
+  ownerId: string;
+  createdAt: string | null;
+}
+
 export default function SettingsPage() {
-  const [notificationSettings, setNotificationSettings] = useState<Record<string, boolean>>({
-    emailAlerts: true,
-    desktopNotifications: true,
-    callSummaries: true,
-    weeklyReports: false
+  const { data: session } = useSession();
+  const [activeTab, setActiveTab] = useState<TabType>('profile');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Profile state
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [profileName, setProfileName] = useState('');
+
+  // Organization state
+  const [org, setOrg] = useState<OrgData | null>(null);
+  const [orgName, setOrgName] = useState('');
+
+  // Notifications state
+  const [notifications, setNotifications] = useState({
+    email: true,
+    callProcessed: true,
+    weeklyReport: true,
+    usageAlerts: true,
   });
 
-  const [integrationStatus, setIntegrationStatus] = useState<Record<string, boolean>>({
-    salesforce: true,
-    hubspot: false,
-    zendesk: true,
-    slack: true
-  });
-  
-  const [hasChanges, setHasChanges] = useState(false);
-  const [activeSection, setActiveSection] = useState('notifications');
-  
-  // Function to handle notification toggle changes
-  const handleNotificationChange = (key: string, value: boolean) => {
-    setNotificationSettings(prev => ({ ...prev, [key]: value }));
-    setHasChanges(true);
+  // Security state
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Delete confirmation
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteType, setDeleteType] = useState<'account' | 'organization' | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [profileRes, orgRes] = await Promise.all([
+          fetch('/api/settings/profile'),
+          fetch('/api/settings/organization'),
+        ]);
+
+        const profileData = await profileRes.json();
+        const orgData = await orgRes.json();
+
+        if (profileData.success) {
+          setProfile(profileData.data);
+          setProfileName(profileData.data.name);
+          setNotifications(profileData.data.notifications);
+        }
+
+        if (orgData.success) {
+          setOrg(orgData.data);
+          setOrgName(orgData.data.name);
+        }
+      } catch (error) {
+        console.error('Failed to fetch settings:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  const showMessage = (type: 'success' | 'error', text: string) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage(null), 3000);
   };
-  
-  // Function to handle integration status changes
-  const handleIntegrationChange = (key: string) => {
-    setIntegrationStatus(prev => ({ ...prev, [key]: !prev[key] }));
-    setHasChanges(true);
-  };
 
-  return (
-    <div className="p-8 pt-24 bg-gradient-to-br from-indigo-50/40 to-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="mb-8 flex flex-col md:flex-row justify-between items-start gap-4">
-        <div>
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-indigo-400">
-            Settings
-          </h1>
-          <p className="text-gray-500 mt-1">Customize your experience and application preferences</p>
-        </div>
-        
-        {hasChanges && (
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-xl text-sm font-medium shadow-sm hover:shadow-md hover:from-indigo-500 hover:to-indigo-400 transition-all duration-200 self-end">
-            <Save className="h-4 w-4" />
-            Save Changes
-          </button>
-        )}
-      </div>
-      
-      {/* Settings Navigation Tabs */}
-      <div className="flex overflow-x-auto mb-6 pb-2 -mx-2 px-2">
-        <button 
-          onClick={() => setActiveSection('notifications')}
-          className={`px-4 py-2 mr-2 rounded-xl whitespace-nowrap text-sm font-medium flex items-center gap-2 transition-all duration-200 ${
-            activeSection === 'notifications' 
-              ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' 
-              : 'bg-white border border-gray-200 text-gray-600 hover:text-indigo-600 hover:border-indigo-200'
-          }`}
-        >
-          <Bell className="h-4 w-4" />
-          Notifications
-        </button>
-        <button 
-          onClick={() => setActiveSection('integrations')}
-          className={`px-4 py-2 mr-2 rounded-xl whitespace-nowrap text-sm font-medium flex items-center gap-2 transition-all duration-200 ${
-            activeSection === 'integrations' 
-              ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' 
-              : 'bg-white border border-gray-200 text-gray-600 hover:text-indigo-600 hover:border-indigo-200'
-          }`}
-        >
-          <Sliders className="h-4 w-4" />
-          Integrations
-        </button>
-        <button 
-          onClick={() => setActiveSection('security')}
-          className={`px-4 py-2 mr-2 rounded-xl whitespace-nowrap text-sm font-medium flex items-center gap-2 transition-all duration-200 ${
-            activeSection === 'security' 
-              ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' 
-              : 'bg-white border border-gray-200 text-gray-600 hover:text-indigo-600 hover:border-indigo-200'
-          }`}
-        >
-          <Shield className="h-4 w-4" />
-          Security
-        </button>
-        <button 
-          onClick={() => setActiveSection('storage')}
-          className={`px-4 py-2 mr-2 rounded-xl whitespace-nowrap text-sm font-medium flex items-center gap-2 transition-all duration-200 ${
-            activeSection === 'storage' 
-              ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' 
-              : 'bg-white border border-gray-200 text-gray-600 hover:text-indigo-600 hover:border-indigo-200'
-          }`}
-        >
-          <Database className="h-4 w-4" />
-          Storage
-        </button>
-        <button 
-          onClick={() => setActiveSection('language')}
-          className={`px-4 py-2 mr-2 rounded-xl whitespace-nowrap text-sm font-medium flex items-center gap-2 transition-all duration-200 ${
-            activeSection === 'language' 
-              ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' 
-              : 'bg-white border border-gray-200 text-gray-600 hover:text-indigo-600 hover:border-indigo-200'
-          }`}
-        >
-          <Globe className="h-4 w-4" />
-          Language
-        </button>
-      </div>
+  const handleSaveProfile = async () => {
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/settings/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: profileName }),
+      });
 
-      <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
-        {/* Main Settings Panel */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* Notifications */}
-          <SettingsCard
-            title="Notification Preferences"
-            icon={<Bell className="h-5 w-5" />}
-            subtitle="Manage how you receive updates and alerts"
-            visible={activeSection === 'notifications' || activeSection === 'all'}
-          >
-            <div className="space-y-3 mt-2">
-              <ToggleItem
-                label="Email Alerts"
-                description="Receive important alerts via email"
-                icon={<Mail className="h-4 w-4" />}
-                checked={notificationSettings.emailAlerts}
-                onChange={(checked) => handleNotificationChange('emailAlerts', checked)}
-              />
-              <ToggleItem
-                label="Desktop Notifications"
-                description="Show desktop notifications for important events"
-                icon={<Smartphone className="h-4 w-4" />}
-                checked={notificationSettings.desktopNotifications}
-                onChange={(checked) => handleNotificationChange('desktopNotifications', checked)}
-              />
-              <ToggleItem
-                label="Call Summaries"
-                description="Receive summaries after each call"
-                icon={<FileText className="h-4 w-4" />}
-                checked={notificationSettings.callSummaries}
-                onChange={(checked) => handleNotificationChange('callSummaries', checked)}
-              />
-              <ToggleItem
-                label="Weekly Reports"
-                description="Get weekly performance reports"
-                icon={<BarChart2 className="h-4 w-4" />}
-                checked={notificationSettings.weeklyReports}
-                onChange={(checked) => handleNotificationChange('weeklyReports', checked)}
-              />
-            </div>
-          </SettingsCard>
-
-          {/* Integrations */}
-          <SettingsCard
-            title="Connected Services"
-            icon={<Sliders className="h-5 w-5" />}
-            subtitle="Manage your integrated third-party applications"
-            visible={activeSection === 'integrations' || activeSection === 'all'}
-          >
-            <div className="space-y-3 mt-2">
-              {Object.entries(integrationStatus).map(([service, status]) => (
-                <IntegrationItem 
-                  key={service}
-                  service={service}
-                  status={status}
-                  onChange={() => handleIntegrationChange(service)}
-                />
-              ))}
-            </div>
-          </SettingsCard>
-
-          {/* Security Settings */}
-          <SettingsCard
-            title="Security Settings"
-            icon={<Shield className="h-5 w-5" />}
-            subtitle="Protect your account and manage access"
-            visible={activeSection === 'security' || activeSection === 'all'}
-          >
-            <div className="space-y-3 mt-2">
-              <SecurityItem
-                title="Two-Factor Authentication"
-                description="Add an extra layer of security to your account"
-                icon={<Lock className="h-4 w-4" />}
-                buttonText="Enable"
-                buttonVariant="primary"
-              />
-              <SecurityItem
-                title="API Keys"
-                description="Manage your API keys and application access"
-                icon={<Key className="h-4 w-4" />}
-                buttonText="Manage"
-                buttonVariant="secondary"
-              />
-              <SecurityItem
-                title="Password Change"
-                description="Update your account password periodically"
-                icon={<RefreshCw className="h-4 w-4" />}
-                buttonText="Change"
-                buttonVariant="secondary"
-              />
-              <SecurityItem
-                title="Security Log"
-                description="Review recent account activity and login attempts"
-                icon={<AlertCircle className="h-4 w-4" />}
-                buttonText="View"
-                buttonVariant="secondary"
-              />
-            </div>
-          </SettingsCard>
-        </div>
-
-        {/* Side Panel */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Storage Usage */}
-          <SettingsCard
-            title="Storage Usage"
-            icon={<Database className="h-5 w-5" />}
-            subtitle="Manage your cloud storage allocation"
-            visible={activeSection === 'storage' || activeSection === 'all'}
-          >
-            <div className="space-y-4 mt-4">
-              <div className="p-4 bg-gradient-to-br from-indigo-50 to-white rounded-xl border border-indigo-100">
-                <div className="flex justify-between items-center mb-3">
-                  <div className="flex items-center gap-2">
-                    <Cloud className="h-4 w-4 text-indigo-500" />
-                    <span className="text-sm font-medium text-gray-700">Used Space</span>
-                  </div>
-                  <span className="text-sm font-semibold text-indigo-600">75%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-gradient-to-r from-indigo-600 to-indigo-400 h-2 rounded-full"
-                    style={{ width: '75%' }} 
-                  />
-                </div>
-                <div className="flex justify-between mt-2 text-xs text-gray-500">
-                  <span>15GB used</span>
-                  <span>20GB total</span>
-                </div>
-              </div>
-              <button className="w-full px-4 py-2.5 flex items-center justify-center gap-2 text-sm font-medium bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl border border-indigo-100 transition-colors duration-200">
-                <Zap className="h-4 w-4" />
-                Upgrade Storage
-              </button>
-            </div>
-          </SettingsCard>
-
-          {/* Language Settings */}
-          <SettingsCard
-            title="Language & Region"
-            icon={<Globe className="h-5 w-5" />}
-            subtitle="Configure localization preferences"
-            visible={activeSection === 'language' || activeSection === 'all'}
-          >
-            <div className="space-y-4 mt-4">
-              <div className="relative">
-                <Globe className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <select className="w-full pl-10 pr-9 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
-                  <option>English (US)</option>
-                  <option>Spanish</option>
-                  <option>French</option>
-                  <option>German</option>
-                </select>
-                <ChevronRight className="h-4 w-4 absolute right-3 top-1/2 transform -translate-y-1/2 -rotate-90 text-gray-400 pointer-events-none" />
-              </div>
-              
-              <div className="relative">
-                <Settings className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <select className="w-full pl-10 pr-9 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
-                  <option>United States</option>
-                  <option>United Kingdom</option>
-                  <option>Canada</option>
-                  <option>Australia</option>
-                </select>
-                <ChevronRight className="h-4 w-4 absolute right-3 top-1/2 transform -translate-y-1/2 -rotate-90 text-gray-400 pointer-events-none" />
-              </div>
-              
-              <div className="relative">
-                <Clock className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <select className="w-full pl-10 pr-9 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
-                  <option>24-hour Time (14:30)</option>
-                  <option>12-hour Time (2:30 PM)</option>
-                </select>
-                <ChevronRight className="h-4 w-4 absolute right-3 top-1/2 transform -translate-y-1/2 -rotate-90 text-gray-400 pointer-events-none" />
-              </div>
-            </div>
-          </SettingsCard>
-          
-          {/* Quick Help */}
-          <div className="bg-gradient-to-br from-indigo-600 to-indigo-400 rounded-xl p-0.5 shadow-sm">
-            <div className="bg-white p-5 rounded-lg flex flex-col items-start">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Need Help?</h3>
-              <p className="text-sm text-gray-500 mb-4">
-                Find answers in our documentation or contact support for assistance
-              </p>
-              <button className="text-sm font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors">
-                View Documentation 
-                <ArrowRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SettingsCard({ title, icon, subtitle, children, visible = true }: {
-  title: string;
-  icon: React.ReactNode;
-  subtitle?: string;
-  children: React.ReactNode;
-  visible?: boolean;
-}) {
-  if (!visible) return null;
-  
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-300">
-      <div className="p-6">
-        <div className="flex items-center gap-3 mb-2">
-          <span className="p-2 bg-indigo-50 rounded-lg text-indigo-600">{icon}</span>
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-            {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
-          </div>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function ToggleItem({ label, description, icon, checked, onChange }: {
-  label: string;
-  description: string;
-  icon?: React.ReactNode;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between p-4 bg-gray-50 hover:bg-indigo-50/40 rounded-xl transition-colors duration-200 border border-gray-100">
-      <div className="flex items-start gap-3">
-        {icon && <span className="mt-0.5 text-gray-400">{icon}</span>}
-        <div>
-          <h4 className="font-medium text-gray-900">{label}</h4>
-          <p className="text-sm text-gray-500 mt-0.5">{description}</p>
-        </div>
-      </div>
-      <button
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 focus:outline-none ${
-          checked 
-            ? 'bg-gradient-to-r from-indigo-600 to-indigo-500' 
-            : 'bg-gray-200'
-        }`}
-      >
-        <span
-          className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
-            checked ? 'translate-x-6' : 'translate-x-0.5'
-          }`}
-        />
-      </button>
-    </div>
-  );
-}
-
-function IntegrationItem({ service, status, onChange }: {
-  service: string;
-  status: boolean;
-  onChange: () => void;
-}) {
-  const getServiceIcon = (serviceName: string) => {
-    // This would ideally use actual service logos
-    switch(serviceName.toLowerCase()) {
-      case 'salesforce':
-        return <Cloud className="h-5 w-5 text-blue-600" />;
-      case 'hubspot':
-        return <Database className="h-5 w-5 text-orange-600" />;
-      case 'zendesk':
-        return <MessageSquare className="h-5 w-5 text-green-600" />;
-      case 'slack':
-        return <MessageCircle className="h-5 w-5 text-purple-600" />;
-      default:
-        return <Zap className="h-5 w-5 text-gray-600" />;
+      const data = await res.json();
+      if (data.success) {
+        showMessage('success', 'Profile updated successfully');
+      } else {
+        showMessage('error', data.error || 'Failed to update profile');
+      }
+    } catch {
+      showMessage('error', 'Failed to update profile');
+    } finally {
+      setIsSaving(false);
     }
   };
-  
-  return (
-    <div className="flex items-center justify-between p-4 bg-gray-50 hover:bg-indigo-50/40 rounded-xl transition-colors duration-200 border border-gray-100">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center border border-gray-100 shadow-sm">
-          {getServiceIcon(service)}
-        </div>
-        <div>
-          <h4 className="font-medium text-gray-900 capitalize">{service}</h4>
-          <p className="text-sm flex items-center gap-1">
-            {status 
-              ? <span className="text-green-600 flex items-center"><CheckCircle className="h-3 w-3 mr-1" /> Connected</span>
-              : <span className="text-gray-500 flex items-center"><XCircle className="h-3 w-3 mr-1" /> Not connected</span>
-            }
-          </p>
+
+  const handleSaveOrganization = async () => {
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/settings/organization', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: orgName }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showMessage('success', 'Organization updated successfully');
+      } else {
+        showMessage('error', data.error || 'Failed to update organization');
+      }
+    } catch {
+      showMessage('error', 'Failed to update organization');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveNotifications = async () => {
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/settings/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notifications }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showMessage('success', 'Notification preferences saved');
+      } else {
+        showMessage('error', data.error || 'Failed to save preferences');
+      }
+    } catch {
+      showMessage('error', 'Failed to save preferences');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      showMessage('error', 'Passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      showMessage('error', 'Password must be at least 6 characters');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/settings/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showMessage('success', 'Password changed successfully');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        showMessage('error', data.error || 'Failed to change password');
+      }
+    } catch {
+      showMessage('error', 'Failed to change password');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (deleteType === 'account' && deleteConfirmText !== 'DELETE') {
+      showMessage('error', 'Please type DELETE to confirm');
+      return;
+    }
+
+    if (deleteType === 'organization' && deleteConfirmText !== org?.name) {
+      showMessage('error', 'Please type the organization name to confirm');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const endpoint = deleteType === 'account' ? '/api/settings/profile' : '/api/settings/organization';
+      const res = await fetch(endpoint, { method: 'DELETE' });
+
+      const data = await res.json();
+      if (data.success) {
+        await signOut({ callbackUrl: '/' });
+      } else {
+        showMessage('error', data.error || 'Failed to delete');
+      }
+    } catch {
+      showMessage('error', 'Failed to delete');
+    } finally {
+      setIsSaving(false);
+      setShowDeleteConfirm(false);
+      setDeleteConfirmText('');
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    showMessage('success', 'Copied to clipboard');
+  };
+
+
+  if (isLoading) {
+    return (
+      <div className="p-8 pt-6 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mx-auto" />
+          <p className="text-gray-500 mt-2">Loading settings...</p>
         </div>
       </div>
-      <button
-        onClick={onChange}
-        className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-          status 
-            ? 'border border-red-200 text-red-600 hover:bg-red-50'
-            : 'border border-green-200 text-green-600 hover:bg-green-50'
-        }`}
-      >
-        {status ? 'Disconnect' : 'Connect'}
-      </button>
+    );
+  }
+
+  const tabs = [
+    { id: 'profile' as TabType, label: 'Profile', icon: User },
+    { id: 'organization' as TabType, label: 'Organization', icon: Building2 },
+    { id: 'notifications' as TabType, label: 'Notifications', icon: Bell },
+    { id: 'security' as TabType, label: 'Security', icon: Shield },
+  ];
+
+  return (
+    <div className="p-8 pt-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        <p className="text-gray-500 mt-1">Manage your account and preferences</p>
+      </div>
+
+      {/* Message Toast */}
+      {message && (
+        <div className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 ${
+          message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          {message.type === 'success' ? <Check className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
+          {message.text}
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6 border-b border-gray-200">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'border-indigo-600 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Profile Tab */}
+      {activeTab === 'profile' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Profile Information</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={profile?.email || ''}
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
+                />
+                <p className="text-xs text-gray-400 mt-1">Email cannot be changed</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <input
+                  type="text"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">User ID</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={profile?.id || ''}
+                    disabled
+                    className="flex-1 px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 font-mono text-sm"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(profile?.id || '')}
+                    className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <Copy className="h-4 w-4 text-gray-500" />
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Member Since</label>
+                <input
+                  type="text"
+                  value={profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={handleSaveProfile}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              >
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Organization Tab */}
+      {activeTab === 'organization' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Organization Details</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Organization Name</label>
+                <input
+                  type="text"
+                  value={orgName}
+                  onChange={(e) => setOrgName(e.target.value)}
+                  disabled={session?.user?.role !== 'owner' && session?.user?.role !== 'admin'}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-50 disabled:text-gray-500"
+                />
+                {session?.user?.role !== 'owner' && session?.user?.role !== 'admin' && (
+                  <p className="text-xs text-gray-400 mt-1">Only owners and admins can change this</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Organization ID</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={org?.id || ''}
+                    disabled
+                    className="flex-1 px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 font-mono text-sm"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(org?.id || '')}
+                    className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <Copy className="h-4 w-4 text-gray-500" />
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Current Plan</label>
+                <input
+                  type="text"
+                  value={org?.plan ? org.plan.charAt(0).toUpperCase() + org.plan.slice(1) : 'Starter'}
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Your Role</label>
+                <input
+                  type="text"
+                  value={session?.user?.role ? session.user.role.charAt(0).toUpperCase() + session.user.role.slice(1) : 'Member'}
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Created</label>
+                <input
+                  type="text"
+                  value={org?.createdAt ? new Date(org.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
+                />
+              </div>
+            </div>
+
+            {(session?.user?.role === 'owner' || session?.user?.role === 'admin') && (
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={handleSaveOrganization}
+                  disabled={isSaving}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                >
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  Save Changes
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Danger Zone */}
+          {session?.user?.role === 'owner' && (
+            <div className="bg-white rounded-xl border border-red-200 p-6">
+              <h2 className="text-lg font-semibold text-red-600 mb-2">Danger Zone</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Deleting your organization will permanently remove all data including calls, analytics, and team members.
+              </p>
+              <button
+                onClick={() => { setDeleteType('organization'); setShowDeleteConfirm(true); }}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete Organization
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+
+      {/* Notifications Tab */}
+      {activeTab === 'notifications' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Email Notifications</h2>
+            
+            <div className="space-y-4">
+              <label className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <div>
+                  <p className="font-medium text-gray-900">Email Notifications</p>
+                  <p className="text-sm text-gray-500">Receive email notifications</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={notifications.email}
+                  onChange={(e) => setNotifications({ ...notifications, email: e.target.checked })}
+                  className="h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500"
+                />
+              </label>
+
+              <label className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <div>
+                  <p className="font-medium text-gray-900">Call Processed</p>
+                  <p className="text-sm text-gray-500">Get notified when a call finishes processing</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={notifications.callProcessed}
+                  onChange={(e) => setNotifications({ ...notifications, callProcessed: e.target.checked })}
+                  className="h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500"
+                />
+              </label>
+
+              <label className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <div>
+                  <p className="font-medium text-gray-900">Weekly Report</p>
+                  <p className="text-sm text-gray-500">Receive a weekly summary of your call analytics</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={notifications.weeklyReport}
+                  onChange={(e) => setNotifications({ ...notifications, weeklyReport: e.target.checked })}
+                  className="h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500"
+                />
+              </label>
+
+              <label className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <div>
+                  <p className="font-medium text-gray-900">Usage Alerts</p>
+                  <p className="text-sm text-gray-500">Get notified when approaching your plan limits</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={notifications.usageAlerts}
+                  onChange={(e) => setNotifications({ ...notifications, usageAlerts: e.target.checked })}
+                  className="h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500"
+                />
+              </label>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={handleSaveNotifications}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              >
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Save Preferences
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Security Tab */}
+      {activeTab === 'security' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Change Password</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    className="w-full px-4 py-2 pr-10 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={handleChangePassword}
+                disabled={isSaving || !newPassword || !confirmPassword}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              >
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
+                Change Password
+              </button>
+            </div>
+          </div>
+
+          {/* Delete Account */}
+          {session?.user?.role !== 'owner' && (
+            <div className="bg-white rounded-xl border border-red-200 p-6">
+              <h2 className="text-lg font-semibold text-red-600 mb-2">Delete Account</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Permanently delete your account. This action cannot be undone.
+              </p>
+              <button
+                onClick={() => { setDeleteType('account'); setShowDeleteConfirm(true); }}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete Account
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {deleteType === 'account' ? 'Delete Account' : 'Delete Organization'}
+              </h3>
+            </div>
+
+            <p className="text-gray-600 mb-4">
+              {deleteType === 'account'
+                ? 'This will permanently delete your account and remove you from the organization. This action cannot be undone.'
+                : 'This will permanently delete your organization, all calls, analytics data, and remove all team members. This action cannot be undone.'}
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {deleteType === 'account'
+                  ? 'Type DELETE to confirm'
+                  : `Type "${org?.name}" to confirm`}
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder={deleteType === 'account' ? 'DELETE' : org?.name}
+              />
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(''); }}
+                className="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-function SecurityItem({ title, description, icon, buttonText, buttonVariant }: {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  buttonText: string;
-  buttonVariant: 'primary' | 'secondary';
-}) {
-  return (
-    <div className="flex items-center justify-between p-4 bg-gray-50 hover:bg-indigo-50/40 rounded-xl transition-colors duration-200 border border-gray-100">
-      <div className="flex items-start gap-3">
-        <span className="mt-0.5 text-gray-400">{icon}</span>
-        <div>
-          <h4 className="font-medium text-gray-900">{title}</h4>
-          <p className="text-sm text-gray-500 mt-0.5">{description}</p>
-        </div>
-      </div>
-      <button
-        className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-          buttonVariant === 'primary'
-            ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-sm hover:shadow hover:from-indigo-500 hover:to-indigo-400'
-            : 'border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-indigo-600 hover:border-indigo-200'
-        }`}
-      >
-        {buttonText}
-      </button>
-    </div>
-  );
-}
-
-// These components would be imported from a component library
-const MessageSquare = ({ className }: { className?: string }) => {
-  return <div className={className}>📝</div>; // Simplified for the example
-};
-
-const MessageCircle = ({ className }: { className?: string }) => {
-  return <div className={className}>💬</div>; // Simplified for the example
-};

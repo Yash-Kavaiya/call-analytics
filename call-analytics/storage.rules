@@ -1,0 +1,20 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to upload to their organization's folder
+    match /organizations/{orgId}/calls/{fileName} {
+      // Allow read for authenticated users
+      allow read: if request.auth != null;
+      
+      // Allow write for authenticated users with size and type restrictions
+      allow write: if request.auth != null 
+        && request.resource.size < 100 * 1024 * 1024  // Max 100MB
+        && request.resource.contentType.matches('audio/.*');
+    }
+    
+    // Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
