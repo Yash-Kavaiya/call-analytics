@@ -1,5 +1,30 @@
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from './firebase';
+import { storage, auth } from './firebase';
+import { signInWithCustomToken } from 'firebase/auth';
+
+// Ensure Firebase auth is ready before upload
+async function ensureFirebaseAuth(): Promise<void> {
+  // If already authenticated, return
+  if (auth.currentUser) {
+    return;
+  }
+
+  // Try to get a custom token and sign in
+  try {
+    const response = await fetch('/api/auth/firebase-token', { method: 'POST' });
+    const data = await response.json();
+    
+    if (data.token) {
+      await signInWithCustomToken(auth, data.token);
+      console.log('Firebase auth ready for upload');
+    } else {
+      throw new Error('No token received');
+    }
+  } catch (error) {
+    console.error('Failed to authenticate with Firebase:', error);
+    throw new Error('Firebase authentication required for upload');
+  }
+}
 
 // Client-side upload function
 export async function uploadAudioFile(
@@ -8,6 +33,9 @@ export async function uploadAudioFile(
   callId: string,
   onProgress?: (progress: number) => void
 ): Promise<string> {
+  // Ensure Firebase auth is ready
+  await ensureFirebaseAuth();
+
   const fileName = `${callId}_${Date.now()}_${file.name}`;
   const filePath = `organizations/${organizationId}/calls/${fileName}`;
   const storageRef = ref(storage, filePath);

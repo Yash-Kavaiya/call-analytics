@@ -1,4 +1,7 @@
 import { NextAuthOptions } from 'next-auth';
+
+console.log("--> AUTH LIB LOADED <--");
+
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { adminAuth, adminDb } from './firebase-admin';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -14,7 +17,9 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
+        console.log("--> AUTHORIZE CALLED WITH:", credentials?.email);
         if (!credentials?.email || !credentials?.password) {
+
           throw new Error('Email and password are required');
         }
 
@@ -30,7 +35,7 @@ export const authOptions: NextAuthOptions = {
 
           // Get user data from Firestore
           const userDoc = await adminDb.collection('users').doc(firebaseUser.uid).get();
-          
+
           if (!userDoc.exists) {
             throw new Error('User not found in database');
           }
@@ -39,7 +44,7 @@ export const authOptions: NextAuthOptions = {
 
           // Get organization data
           const orgDoc = await adminDb.collection('organizations').doc(userData.organizationId).get();
-          
+
           if (!orgDoc.exists) {
             throw new Error('Organization not found');
           }
@@ -60,9 +65,9 @@ export const authOptions: NextAuthOptions = {
         } catch (error: unknown) {
           console.error('Auth error:', error);
           if (error instanceof Error) {
-            if (error.message.includes('auth/invalid-credential') || 
-                error.message.includes('auth/wrong-password') ||
-                error.message.includes('auth/user-not-found')) {
+            if (error.message.includes('auth/invalid-credential') ||
+              error.message.includes('auth/wrong-password') ||
+              error.message.includes('auth/user-not-found')) {
               throw new Error('Invalid email or password');
             }
             throw new Error(error.message);

@@ -14,7 +14,7 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
   const registered = searchParams.get('registered');
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,25 +30,30 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     setError(null);
-
     try {
       const result = await signIn('credentials', {
         email: data.email,
         password: data.password,
         redirect: false,
       });
+      alert(`SignIn Result: ${JSON.stringify(result, null, 2)}`);
 
       if (result?.error) {
         setError(result.error);
       } else {
-        router.push(callbackUrl);
-        router.refresh();
+        // router.push(callbackUrl);
+        // router.refresh();
       }
-    } catch {
+    } catch (err: any) {
+      alert(`SignIn Error: ${err.message}`);
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const onErrors = (errors: any) => {
+    console.error('Form validation errors:', errors);
   };
 
   return (
@@ -83,7 +88,7 @@ export default function LoginPage() {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <form onSubmit={handleSubmit(onSubmit, onErrors)} className="space-y-5">
           {/* Email */}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -96,9 +101,8 @@ export default function LoginPage() {
                 type="email"
                 id="email"
                 autoComplete="email"
-                className={`w-full pl-11 pr-4 py-3 border rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all ${
-                  errors.email ? 'border-red-300' : 'border-gray-200'
-                }`}
+                className={`w-full pl-11 pr-4 py-3 border rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all ${errors.email ? 'border-red-300' : 'border-gray-200'
+                  }`}
                 placeholder="you@example.com"
               />
             </div>
@@ -119,9 +123,8 @@ export default function LoginPage() {
                 type={showPassword ? 'text' : 'password'}
                 id="password"
                 autoComplete="current-password"
-                className={`w-full pl-11 pr-12 py-3 border rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all ${
-                  errors.password ? 'border-red-300' : 'border-gray-200'
-                }`}
+                className={`w-full pl-11 pr-12 py-3 border rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all ${errors.password ? 'border-red-300' : 'border-gray-200'
+                  }`}
                 placeholder="••••••••"
               />
               <button
