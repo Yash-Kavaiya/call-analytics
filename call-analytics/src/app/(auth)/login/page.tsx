@@ -27,26 +27,42 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = async (data: LoginFormData) => {
+  const onSubmit = async (data: LoginFormData, e?: any) => {
+    if (e && e.preventDefault) e.preventDefault();
+    console.error("!!! CLIENT SUBMIT STARTED !!!", data);
+
     setIsLoading(true);
     setError(null);
     try {
+      console.error("!!! CALLING SIGNIN !!!");
       const result = await signIn('credentials', {
         email: data.email,
         password: data.password,
         redirect: false,
       });
-      alert(`SignIn Result: ${JSON.stringify(result, null, 2)}`);
+      console.error("!!! SIGNIN RETURNED !!!", result);
+
+      // Force display result
+      if (result) {
+        setError(JSON.stringify(result, null, 2));
+      } else {
+        setError("RESULT IS NULL/UNDEFINED");
+      }
 
       if (result?.error) {
-        setError(result.error);
+        // setError(result.error);
+        console.error("!!! SIGNIN ERROR !!!", result.error);
       } else {
+        console.error("!!! SIGNIN SUCCESS !!!");
         // router.push(callbackUrl);
         // router.refresh();
       }
     } catch (err: any) {
-      alert(`SignIn Error: ${err.message}`);
-      setError('An unexpected error occurred. Please try again.');
+      console.error("!!! SIGNIN EXCEPTION !!!", err);
+      // alert(`SignIn Error: ${err.message}`);
+      // alert(`SignIn Error: ${err.message}`);
+      setError(`EXCEPTION: ${err.message}`);
+      // setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }

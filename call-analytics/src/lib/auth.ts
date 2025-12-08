@@ -17,8 +17,9 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        console.log("--> AUTHORIZE CALLED WITH:", credentials?.email);
+        console.error("!!! AUTHORIZE EXECUTING !!! EMAIL:", credentials?.email);
         if (!credentials?.email || !credentials?.password) {
+
 
           throw new Error('Email and password are required');
         }
@@ -79,7 +80,9 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user }) {
+      console.error("!!! JWT CALLBACK !!!", { token_id: token?.id, user_id: user?.id });
       if (user) {
+
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
@@ -92,7 +95,9 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
+      console.error("!!! SESSION CALLBACK !!!", { session_user: session?.user?.email, token_id: token?.id });
       if (token && session.user) {
+
         session.user.id = token.id as string;
         session.user.email = token.email as string;
         session.user.name = token.name as string;
