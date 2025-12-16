@@ -5,6 +5,10 @@ import { adminStorage } from '@/lib/firebase-admin';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 
+// Increase timeout for file uploads
+export const maxDuration = 120; // 2 minutes
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);

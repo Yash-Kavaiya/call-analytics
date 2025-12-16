@@ -7,6 +7,10 @@ import { transcribeAudio } from '@/lib/elevenlabs';
 import { analyzeCallTranscript } from '@/lib/gemini';
 import { Timestamp } from 'firebase-admin/firestore';
 
+// Increase timeout for long-running transcription/analysis
+export const maxDuration = 300; // 5 minutes max
+export const dynamic = 'force-dynamic';
+
 // POST - Process call (transcribe + analyze)
 export async function POST(
   _request: NextRequest,
