@@ -4,36 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { FileUploader } from '@/components/upload/FileUploader';
 import { UploadProgress, UploadStatus } from '@/components/upload/UploadProgress';
-// Server-side upload function
-async function uploadAudioFile(
-  file: File,
-  organizationId: string,
-  callId: string,
-  onProgress?: (progress: number) => void
-): Promise<string> {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('callId', callId);
-
-  // Simulate progress since we can't track server upload progress easily
-  onProgress?.(10);
-
-  const response = await fetch('/api/upload', {
-    method: 'POST',
-    body: formData,
-  });
-
-  onProgress?.(90);
-
-  const data = await response.json();
-
-  if (!data.success) {
-    throw new Error(data.error || 'Upload failed');
-  }
-
-  onProgress?.(100);
-  return data.data.url;
-}
+import { smartUpload } from '@/lib/upload-client';
 import {
   Upload,
   FileAudio,
@@ -131,7 +102,7 @@ export default function FilesPage() {
 
       callId = createData.data.id;
 
-      const audioUrl = await uploadAudioFile(
+      const audioUrl = await smartUpload(
         upload.file,
         session.user.organizationId,
         callId!,
