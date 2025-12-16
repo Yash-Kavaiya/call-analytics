@@ -38,15 +38,23 @@ export default function LoginPage() {
         redirect: false,
       });
 
+      console.log('Sign in result:', result);
+
       if (result?.error) {
-        setError(result.error === 'CredentialsSignin' 
-          ? 'Invalid email or password' 
-          : result.error);
+        // Show the actual error message from the server
+        if (result.error === 'CredentialsSignin') {
+          setError('Invalid email or password. Please check your credentials.');
+        } else {
+          setError(result.error);
+        }
       } else if (result?.ok) {
         router.push(callbackUrl);
         router.refresh();
+      } else {
+        setError('Login failed. Please try again.');
       }
-    } catch {
+    } catch (err) {
+      console.error('Login error:', err);
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);

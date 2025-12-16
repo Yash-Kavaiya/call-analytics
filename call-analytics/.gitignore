@@ -1,0 +1,3 @@
+
+# HAR files (may contain secrets)
+*.har

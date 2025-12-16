@@ -13,22 +13,20 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.error('Auth: Missing email or password');
           throw new Error('Email and password are required');
         }
 
         try {
-          // Get user by email from Firebase Admin
-          let firebaseUser;
-          try {
-            firebaseUser = await adminAuth.getUserByEmail(credentials.email);
-          } catch {
-            throw new Error('Invalid email or password');
+          console.log('Auth: Attempting login for:', credentials.email);
+          
+          // Verify password using Firebase REST API first
+          const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+          if (!apiKey) {
+            console.error('Auth: NEXT_PUBLIC_FIREBASE_API_KEY is not configured');
+            throw new Error('Server configuration error');
           }
 
-          // Verify password by attempting to sign in
-          // Since Firebase Admin doesn't have a direct password verify method,
-          // we'll use the REST API to verify credentials
-          const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
           const response = await fetch(
             `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
             {
@@ -42,33 +40,42 @@ export const authOptions: NextAuthOptions = {
             }
           );
 
-          const data = await response.json();
+          const authData = await response.json();
           
-          if (!response.ok || data.error) {
+          if (!response.ok || authData.error) {
+            console.error('Auth: Firebase REST API error:', authData.error?.message || 'Unknown error');
             throw new Error('Invalid email or password');
           }
 
+          console.log('Auth: Password verified successfully');
+          const firebaseUid = authData.localId;
+
           // Get user data from Firestore
-          const userDoc = await adminDb.collection('users').doc(firebaseUser.uid).get();
+          console.log('Auth: Fetching user from Firestore:', firebaseUid);
+          const userDoc = await adminDb.collection('users').doc(firebaseUid).get();
 
           if (!userDoc.exists) {
-            throw new Error('User not found in database');
+            console.error('Auth: User not found in Firestore:', firebaseUid);
+            throw new Error('User profile not found. Please register again.');
           }
 
           const userData = userDoc.data() as User;
+          console.log('Auth: User data found, org:', userData.organizationId);
 
           // Get organization data
           const orgDoc = await adminDb.collection('organizations').doc(userData.organizationId).get();
 
           if (!orgDoc.exists) {
+            console.error('Auth: Organization not found:', userData.organizationId);
             throw new Error('Organization not found');
           }
 
           const orgData = orgDoc.data() as Organization;
+          console.log('Auth: Login successful for:', credentials.email);
 
           // Return session user
           return {
-            id: firebaseUser.uid,
+            id: firebaseUid,
             email: userData.email,
             name: userData.name,
             avatar: userData.avatar,
@@ -78,13 +85,9 @@ export const authOptions: NextAuthOptions = {
             plan: orgData.plan,
           };
         } catch (error: unknown) {
-          console.error('Auth error:', error);
+          console.error('Auth error details:', error);
           if (error instanceof Error) {
-            if (error.message.includes('auth/invalid-credential') ||
-              error.message.includes('auth/wrong-password') ||
-              error.message.includes('auth/user-not-found')) {
-              throw new Error('Invalid email or password');
-            }
+            // Pass through our custom error messages
             throw new Error(error.message);
           }
           throw new Error('Authentication failed');
