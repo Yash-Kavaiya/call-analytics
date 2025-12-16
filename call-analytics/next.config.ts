@@ -1,22 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Increase server-side timeout for API routes
+  // External packages for server-side
   serverExternalPackages: ['@elevenlabs/elevenlabs-js'],
   
-  // Experimental features for longer timeouts
+  // Experimental features
   experimental: {
     serverActions: {
       bodySizeLimit: '50mb',
     },
-  },
-  
-  // Allow larger request bodies for audio uploads
-  api: {
-    bodyParser: {
-      sizeLimit: '50mb',
-    },
-    responseLimit: false,
   },
 };
 
