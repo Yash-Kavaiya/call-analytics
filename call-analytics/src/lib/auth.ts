@@ -1,6 +1,6 @@
 import { NextAuthOptions } from 'next-auth';
 
-console.log("--> AUTH LIB LOADED <--");
+
 
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { adminAuth, adminDb } from './firebase-admin';
@@ -17,7 +17,6 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        console.error("!!! AUTHORIZE EXECUTING !!! EMAIL:", credentials?.email);
         if (!credentials?.email || !credentials?.password) {
 
 
@@ -80,7 +79,6 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user }) {
-      console.error("!!! JWT CALLBACK !!!", { token_id: token?.id, user_id: user?.id });
       if (user) {
 
         token.id = user.id;
@@ -95,7 +93,6 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      console.error("!!! SESSION CALLBACK !!!", { session_user: session?.user?.email, token_id: token?.id });
       if (token && session.user) {
 
         session.user.id = token.id as string;

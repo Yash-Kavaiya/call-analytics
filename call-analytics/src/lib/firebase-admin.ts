@@ -10,7 +10,7 @@ function getFirebaseAdminApp(): App {
 
   // Handle private key - it may come with escaped newlines or actual newlines
   let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
-  
+
   if (privateKey) {
     // Replace escaped newlines with actual newlines
     privateKey = privateKey.replace(/\\n/g, '\n');
@@ -25,7 +25,7 @@ function getFirebaseAdminApp(): App {
     throw new Error('Missing Firebase Admin credentials');
   }
 
-  console.log('Initializing Firebase Admin with project:', process.env.FIREBASE_ADMIN_PROJECT_ID);
+
 
   return initializeApp({
     credential: cert({

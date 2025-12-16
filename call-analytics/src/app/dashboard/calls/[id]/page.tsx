@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
-import { 
+import {
   ArrowLeft,
   Clock,
   FileAudio,
@@ -17,6 +16,17 @@ import {
   Minus,
   User,
   Users,
+  Download,
+  Play,
+  Pause,
+  TrendingUp,
+  Target,
+  Zap,
+  Award,
+  Tag,
+  ListChecks,
+  Sparkles,
+  Volume2,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -60,12 +70,12 @@ interface CallData {
 
 export default function CallDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const router = useRouter();
   const [call, setCall] = useState<CallData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [report, setReport] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'transcript' | 'analysis' | 'report'>('transcript');
+  const [activeTab, setActiveTab] = useState<'overview' | 'transcript' | 'report'>('overview');
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     async function fetchCall() {
@@ -84,7 +94,6 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
         setIsLoading(false);
       }
     }
-
     fetchCall();
   }, [id]);
 
@@ -105,7 +114,7 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
   };
 
   const formatDuration = (seconds?: number): string => {
-    if (!seconds) return '--:--';
+    if (!seconds) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -117,36 +126,49 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getSentimentIcon = (sentiment?: string) => {
+  const getScoreColor = (score: number) => {
+    if (score >= 8) return 'text-emerald-600';
+    if (score >= 6) return 'text-amber-600';
+    return 'text-red-600';
+  };
+
+  const getScoreBg = (score: number) => {
+    if (score >= 8) return 'bg-emerald-500';
+    if (score >= 6) return 'bg-amber-500';
+    return 'bg-red-500';
+  };
+
+  const getSentimentConfig = (sentiment?: string) => {
     switch (sentiment) {
       case 'positive':
-        return <ThumbsUp className="h-5 w-5 text-green-600" />;
+        return { icon: ThumbsUp, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', label: 'Positive' };
       case 'negative':
-        return <ThumbsDown className="h-5 w-5 text-red-600" />;
+        return { icon: ThumbsDown, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200', label: 'Negative' };
       default:
-        return <Minus className="h-5 w-5 text-gray-600" />;
+        return { icon: Minus, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', label: 'Neutral' };
     }
   };
 
-  const getSatisfactionBadge = (satisfaction?: string) => {
-    const styles: Record<string, string> = {
-      satisfied: 'bg-green-50 text-green-700',
-      neutral: 'bg-yellow-50 text-yellow-700',
-      dissatisfied: 'bg-red-50 text-red-700',
-    };
-    return satisfaction ? (
-      <span className={`px-3 py-1 rounded-full text-sm font-medium ${styles[satisfaction] || 'bg-gray-50 text-gray-700'}`}>
-        {satisfaction.charAt(0).toUpperCase() + satisfaction.slice(1)}
-      </span>
-    ) : null;
+  const getSatisfactionConfig = (satisfaction?: string) => {
+    switch (satisfaction) {
+      case 'satisfied':
+        return { color: 'text-emerald-700', bg: 'bg-emerald-100', icon: '😊' };
+      case 'dissatisfied':
+        return { color: 'text-red-700', bg: 'bg-red-100', icon: '😞' };
+      default:
+        return { color: 'text-amber-700', bg: 'bg-amber-100', icon: '😐' };
+    }
   };
 
   if (isLoading) {
     return (
-      <div className="p-8 pt-6 flex items-center justify-center min-h-[60vh]">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50/30 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mx-auto" />
-          <p className="text-gray-500 mt-2">Loading call details...</p>
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-indigo-200 rounded-full animate-pulse"></div>
+            <Loader2 className="h-8 w-8 animate-spin text-indigo-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+          </div>
+          <p className="text-gray-500 mt-4 font-medium">Loading call analysis...</p>
         </div>
       </div>
     );
@@ -154,322 +176,433 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
 
   if (!call) {
     return (
-      <div className="p-8 pt-6 text-center">
-        <AlertCircle className="h-12 w-12 text-red-400 mx-auto" />
-        <h2 className="text-xl font-semibold text-gray-900 mt-4">Call not found</h2>
-        <p className="text-gray-500 mt-2">The call you are looking for does not exist.</p>
-        <Link
-          href="/dashboard/calls"
-          className="inline-flex items-center gap-2 mt-4 text-indigo-600 hover:text-indigo-700"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to calls
-        </Link>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50/30 flex items-center justify-center">
+        <div className="text-center bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
+          <AlertCircle className="h-16 w-16 text-red-400 mx-auto" />
+          <h2 className="text-xl font-bold text-gray-900 mt-4">Call Not Found</h2>
+          <p className="text-gray-500 mt-2">The call you&apos;re looking for doesn&apos;t exist.</p>
+          <Link
+            href="/dashboard/calls"
+            className="inline-flex items-center gap-2 mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Calls
+          </Link>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="p-8 pt-6 max-w-6xl mx-auto">
-      {/* Back Button */}
-      <Link
-        href="/dashboard/calls"
-        className="inline-flex items-center gap-2 text-gray-600 hover:text-indigo-600 mb-6 transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to calls
-      </Link>
+  const sentimentConfig = getSentimentConfig(call.sentiment);
+  const satisfactionConfig = getSatisfactionConfig(call.analysis?.customerSatisfaction);
+  const avgPerformance = call.analysis?.agentPerformance
+    ? Math.round((call.analysis.agentPerformance.professionalism + call.analysis.agentPerformance.helpfulness + call.analysis.agentPerformance.clarity + call.analysis.agentPerformance.resolution) / 4 * 10) / 10
+    : 0;
 
-      {/* Header */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-              <FileAudio className="h-7 w-7" />
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50/30">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Back Button */}
+        <Link
+          href="/dashboard/calls"
+          className="inline-flex items-center gap-2 text-gray-600 hover:text-indigo-600 mb-6 transition-colors group"
+        >
+          <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
+          <span className="font-medium">Back to Calls</span>
+        </Link>
+
+        {/* Hero Header */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+          <div className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 px-6 py-8">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
+                  <FileAudio className="h-8 w-8 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-white">{call.fileName}</h1>
+                  <p className="text-indigo-100 mt-1">
+                    {new Date(call.createdAt).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                {call.audioUrl && (
+                  <button
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur text-white rounded-xl hover:bg-white/30 transition-colors"
+                  >
+                    {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                    {isPlaying ? 'Pause' : 'Play Audio'}
+                  </button>
+                )}
+                <button
+                  onClick={generateReport}
+                  disabled={isGeneratingReport}
+                  className="flex items-center gap-2 px-4 py-2 bg-white text-indigo-600 rounded-xl hover:bg-indigo-50 transition-colors font-medium disabled:opacity-50"
+                >
+                  {isGeneratingReport ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  {isGeneratingReport ? 'Generating...' : 'Export Report'}
+                </button>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">{call.fileName}</h1>
-              <p className="text-gray-500 text-sm">
-                {new Date(call.createdAt).toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+          </div>
+
+          {/* Quick Stats Bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-gray-100">
+            <div className="p-4 text-center">
+              <div className="flex items-center justify-center gap-2 text-gray-500 text-sm mb-1">
+                <Clock className="h-4 w-4" />
+                Duration
+              </div>
+              <p className="text-xl font-bold text-gray-900">{formatDuration(call.duration)}</p>
+            </div>
+            <div className="p-4 text-center">
+              <div className="flex items-center justify-center gap-2 text-gray-500 text-sm mb-1">
+                <Volume2 className="h-4 w-4" />
+                Language
+              </div>
+              <p className="text-xl font-bold text-gray-900">{call.language?.toUpperCase() || 'EN'}</p>
+            </div>
+            <div className="p-4 text-center">
+              <div className="flex items-center justify-center gap-2 text-gray-500 text-sm mb-1">
+                <Target className="h-4 w-4" />
+                Quality Score
+              </div>
+              <p className={`text-xl font-bold ${getScoreColor(call.qualityScore || 0)}`}>
+                {call.qualityScore || 0}/10
+              </p>
+            </div>
+            <div className="p-4 text-center">
+              <div className="flex items-center justify-center gap-2 text-gray-500 text-sm mb-1">
+                <Award className="h-4 w-4" />
+                Agent Score
+              </div>
+              <p className={`text-xl font-bold ${getScoreColor(avgPerformance)}`}>
+                {avgPerformance}/10
               </p>
             </div>
           </div>
-
-          <div className="flex flex-wrap gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg text-sm text-gray-700">
-              <Clock className="h-4 w-4 text-gray-400" />
-              {formatDuration(call.duration)}
-            </div>
-            {call.sentiment && (
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${
-                call.sentiment === 'positive' ? 'bg-green-50 text-green-700' :
-                call.sentiment === 'negative' ? 'bg-red-50 text-red-700' :
-                'bg-gray-50 text-gray-700'
-              }`}>
-                {getSentimentIcon(call.sentiment)}
-                {call.sentiment.charAt(0).toUpperCase() + call.sentiment.slice(1)}
-              </div>
-            )}
-            {call.qualityScore && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 rounded-lg text-sm text-indigo-700">
-                <BarChart3 className="h-4 w-4" />
-                Quality: {call.qualityScore}/10
-              </div>
-            )}
-          </div>
         </div>
-      </div>
 
-      {/* Summary Card */}
-      {call.summary && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-indigo-600" />
-            Summary
-          </h2>
-          <p className="text-gray-700 leading-relaxed">{call.summary}</p>
-          
-          {call.topics && call.topics.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-100">
-              <p className="text-sm font-medium text-gray-500 mb-2">Topics Discussed</p>
-              <div className="flex flex-wrap gap-2">
-                {call.topics.map((topic, index) => (
-                  <span key={index} className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-sm">
-                    {topic}
-                  </span>
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Analysis Cards */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Summary Card */}
+            {call.summary && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-10 w-10 rounded-xl bg-indigo-100 flex items-center justify-center">
+                    <Sparkles className="h-5 w-5 text-indigo-600" />
+                  </div>
+                  <h2 className="text-lg font-bold text-gray-900">AI Summary</h2>
+                </div>
+                <p className="text-gray-700 leading-relaxed text-lg">{call.summary}</p>
+              </div>
+            )}
+
+            {/* Tabs */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="flex border-b border-gray-100">
+                {[
+                  { id: 'overview', label: 'Analysis', icon: BarChart3 },
+                  { id: 'transcript', label: 'Transcript', icon: MessageSquare },
+                  { id: 'report', label: 'Full Report', icon: FileText },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-4 text-sm font-medium transition-all ${
+                      activeTab === tab.id
+                        ? 'text-indigo-600 bg-indigo-50/50 border-b-2 border-indigo-600'
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <tab.icon className="h-4 w-4" />
+                    {tab.label}
+                  </button>
                 ))}
               </div>
-            </div>
-          )}
-        </div>
-      )}
 
-      {/* Tabs */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="flex border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab('transcript')}
-            className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
-              activeTab === 'transcript'
-                ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <MessageSquare className="h-4 w-4 inline mr-2" />
-            Transcript
-          </button>
-          <button
-            onClick={() => setActiveTab('analysis')}
-            className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
-              activeTab === 'analysis'
-                ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <BarChart3 className="h-4 w-4 inline mr-2" />
-            Analysis
-          </button>
-          <button
-            onClick={() => setActiveTab('report')}
-            className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
-              activeTab === 'report'
-                ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <FileText className="h-4 w-4 inline mr-2" />
-            Report
-          </button>
-        </div>
-
-        <div className="p-6">
-          {/* Transcript Tab */}
-          {activeTab === 'transcript' && (
-            <div>
-              {call.transcript?.segments && call.transcript.segments.length > 0 ? (
-                <div className="space-y-4 max-h-[500px] overflow-y-auto">
-                  {call.transcript.segments.map((segment, index) => (
-                    <div key={index} className="flex gap-4">
-                      <div className="text-xs text-gray-400 pt-1 w-12 flex-shrink-0">
-                        {formatTime(segment.startTime)}
-                      </div>
-                      <div className={`flex-1 p-4 rounded-xl ${
-                        segment.speaker === 'agent'
-                          ? 'bg-indigo-50 border border-indigo-100'
-                          : segment.speaker === 'customer'
-                          ? 'bg-gray-50 border border-gray-100'
-                          : 'bg-yellow-50 border border-yellow-100'
-                      }`}>
-                        <div className="flex items-center gap-2 mb-2">
-                          {segment.speaker === 'agent' ? (
-                            <User className="h-4 w-4 text-indigo-600" />
-                          ) : (
-                            <Users className="h-4 w-4 text-gray-600" />
-                          )}
-                          <span className={`text-sm font-medium ${
-                            segment.speaker === 'agent' ? 'text-indigo-700' : 'text-gray-700'
-                          }`}>
-                            {segment.speaker.charAt(0).toUpperCase() + segment.speaker.slice(1)}
-                          </span>
+              <div className="p-6">
+                {/* Overview Tab */}
+                {activeTab === 'overview' && (
+                  <div className="space-y-8">
+                    {/* Agent Performance */}
+                    {call.analysis?.agentPerformance && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-indigo-600" />
+                          Agent Performance Metrics
+                        </h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          {Object.entries(call.analysis.agentPerformance).map(([key, value]) => (
+                            <div key={key} className="bg-gray-50 rounded-xl p-4">
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm font-medium text-gray-600 capitalize">{key}</span>
+                                <span className={`text-lg font-bold ${getScoreColor(value)}`}>{value}</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                <div
+                                  className={`h-2.5 rounded-full transition-all duration-500 ${getScoreBg(value)}`}
+                                  style={{ width: `${value * 10}%` }}
+                                />
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <p className="text-gray-700">{segment.text}</p>
                       </div>
-                    </div>
+                    )}
+
+                    {/* Action Items */}
+                    {call.analysis?.actionItems && call.analysis.actionItems.length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                          <ListChecks className="h-4 w-4 text-indigo-600" />
+                          Action Items
+                        </h3>
+                        <div className="space-y-3">
+                          {call.analysis.actionItems.map((item, index) => (
+                            <div key={index} className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-100 rounded-xl">
+                              <CheckCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-700">{item}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Keywords */}
+                    {call.keywords && call.keywords.length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                          <Tag className="h-4 w-4 text-indigo-600" />
+                          Keywords Detected
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          {call.keywords.map((keyword, index) => (
+                            <span
+                              key={index}
+                              className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                            >
+                              {keyword}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Transcript Tab */}
+                {activeTab === 'transcript' && (
+                  <div className="max-h-[600px] overflow-y-auto pr-2 space-y-4">
+                    {call.transcript?.segments && call.transcript.segments.length > 0 ? (
+                      call.transcript.segments.map((segment, index) => (
+                        <div key={index} className="flex gap-4 group">
+                          <div className="text-xs text-gray-400 pt-3 w-14 flex-shrink-0 font-mono">
+                            {formatTime(segment.startTime)}
+                          </div>
+                          <div className={`flex-1 p-4 rounded-2xl transition-all ${
+                            segment.speaker.toLowerCase().includes('agent')
+                              ? 'bg-gradient-to-r from-indigo-50 to-indigo-50/50 border border-indigo-100'
+                              : 'bg-gradient-to-r from-gray-50 to-gray-50/50 border border-gray-100'
+                          }`}>
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className={`h-6 w-6 rounded-full flex items-center justify-center ${
+                                segment.speaker.toLowerCase().includes('agent')
+                                  ? 'bg-indigo-200 text-indigo-700'
+                                  : 'bg-gray-200 text-gray-700'
+                              }`}>
+                                {segment.speaker.toLowerCase().includes('agent') ? (
+                                  <User className="h-3.5 w-3.5" />
+                                ) : (
+                                  <Users className="h-3.5 w-3.5" />
+                                )}
+                              </div>
+                              <span className={`text-sm font-semibold ${
+                                segment.speaker.toLowerCase().includes('agent') ? 'text-indigo-700' : 'text-gray-700'
+                              }`}>
+                                {segment.speaker}
+                              </span>
+                            </div>
+                            <p className="text-gray-700 leading-relaxed">{segment.text}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : call.transcript?.text ? (
+                      <div className="bg-gray-50 rounded-2xl p-6">
+                        <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{call.transcript.text}</p>
+                      </div>
+                    ) : (
+                      <div className="text-center py-16">
+                        <MessageSquare className="h-16 w-16 text-gray-200 mx-auto mb-4" />
+                        <p className="text-gray-400 font-medium">No transcript available</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Report Tab */}
+                {activeTab === 'report' && (
+                  <div>
+                    {report ? (
+                      <div className="prose prose-indigo max-w-none">
+                        <div
+                          className="text-gray-700"
+                          dangerouslySetInnerHTML={{
+                            __html: report
+                              .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold text-gray-900 mt-8 mb-4 pb-2 border-b border-gray-200">$1</h1>')
+                              .replace(/^## (.*$)/gm, '<h2 class="text-xl font-semibold text-gray-800 mt-6 mb-3">$1</h2>')
+                              .replace(/^### (.*$)/gm, '<h3 class="text-lg font-medium text-gray-700 mt-4 mb-2">$1</h3>')
+                              .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
+                              .replace(/^- (.*$)/gm, '<li class="ml-4 mb-1 text-gray-600">$1</li>')
+                              .replace(/\n\n/g, '</p><p class="mb-4">')
+                              .replace(/\n/g, '<br/>')
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="text-center py-16">
+                        <div className="h-20 w-20 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-4">
+                          <FileText className="h-10 w-10 text-indigo-300" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Report Generated</h3>
+                        <p className="text-gray-500 mb-6">Generate a comprehensive AI report for this call</p>
+                        <button
+                          onClick={generateReport}
+                          disabled={isGeneratingReport}
+                          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50"
+                        >
+                          {isGeneratingReport ? (
+                            <>
+                              <Loader2 className="h-5 w-5 animate-spin" />
+                              Generating Report...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="h-5 w-5" />
+                              Generate AI Report
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Sidebar */}
+          <div className="space-y-6">
+            {/* Sentiment Card */}
+            <div className={`rounded-2xl p-6 ${sentimentConfig.bg} border ${sentimentConfig.border}`}>
+              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-4">Sentiment Analysis</h3>
+              <div className="flex items-center gap-4">
+                <div className={`h-16 w-16 rounded-2xl ${sentimentConfig.bg} border-2 ${sentimentConfig.border} flex items-center justify-center`}>
+                  <sentimentConfig.icon className={`h-8 w-8 ${sentimentConfig.color}`} />
+                </div>
+                <div>
+                  <p className={`text-2xl font-bold ${sentimentConfig.color}`}>{sentimentConfig.label}</p>
+                  {call.sentimentScore !== undefined && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      Confidence: {Math.round(call.sentimentScore * 100)}%
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Customer Satisfaction */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-4">Customer Satisfaction</h3>
+              <div className="flex items-center gap-4">
+                <div className={`h-14 w-14 rounded-2xl ${satisfactionConfig.bg} flex items-center justify-center text-3xl`}>
+                  {satisfactionConfig.icon}
+                </div>
+                <div>
+                  <p className={`text-xl font-bold ${satisfactionConfig.color} capitalize`}>
+                    {call.analysis?.customerSatisfaction || 'Unknown'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Topics */}
+            {call.topics && call.topics.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-4">Topics Discussed</h3>
+                <div className="flex flex-wrap gap-2">
+                  {call.topics.map((topic, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-2 bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 rounded-xl text-sm font-medium border border-indigo-100"
+                    >
+                      {topic}
+                    </span>
                   ))}
                 </div>
-              ) : call.transcript?.text ? (
-                <div className="prose max-w-none">
-                  <p className="text-gray-700 whitespace-pre-wrap">{call.transcript.text}</p>
-                </div>
-              ) : (
-                <div className="text-center py-12 text-gray-400">
-                  <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>No transcript available</p>
-                </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
 
-          {/* Analysis Tab */}
-          {activeTab === 'analysis' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Sentiment & Satisfaction */}
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-3">Sentiment Analysis</h3>
-                  <div className="flex items-center gap-4">
-                    <div className={`h-16 w-16 rounded-xl flex items-center justify-center ${
-                      call.sentiment === 'positive' ? 'bg-green-50' :
-                      call.sentiment === 'negative' ? 'bg-red-50' : 'bg-gray-50'
-                    }`}>
-                      {getSentimentIcon(call.sentiment)}
-                    </div>
-                    <div>
-                      <p className="text-lg font-semibold text-gray-900 capitalize">
-                        {call.sentiment || 'Unknown'}
-                      </p>
-                      {call.sentimentScore !== undefined && (
-                        <p className="text-sm text-gray-500">
-                          Score: {Math.round(call.sentimentScore * 100)}%
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-3">Customer Satisfaction</h3>
-                  {getSatisfactionBadge(call.analysis?.customerSatisfaction)}
-                </div>
-
-                {call.keywords && call.keywords.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-3">Keywords</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {call.keywords.map((keyword, index) => (
-                        <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm">
-                          {keyword}
+            {/* Quality Score Gauge */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-4">Overall Quality</h3>
+              <div className="relative pt-4">
+                <div className="flex justify-center">
+                  <div className="relative">
+                    <svg className="w-32 h-32 transform -rotate-90">
+                      <circle
+                        cx="64"
+                        cy="64"
+                        r="56"
+                        stroke="#e5e7eb"
+                        strokeWidth="12"
+                        fill="none"
+                      />
+                      <circle
+                        cx="64"
+                        cy="64"
+                        r="56"
+                        stroke={call.qualityScore && call.qualityScore >= 7 ? '#10b981' : call.qualityScore && call.qualityScore >= 5 ? '#f59e0b' : '#ef4444'}
+                        strokeWidth="12"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeDasharray={`${(call.qualityScore || 0) * 35.2} 352`}
+                        className="transition-all duration-1000"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center">
+                        <span className={`text-3xl font-bold ${getScoreColor(call.qualityScore || 0)}`}>
+                          {call.qualityScore || 0}
                         </span>
-                      ))}
+                        <span className="text-gray-400 text-lg">/10</span>
+                      </div>
                     </div>
                   </div>
-                )}
-              </div>
-
-              {/* Agent Performance */}
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-3">Agent Performance</h3>
-                {call.analysis?.agentPerformance ? (
-                  <div className="space-y-4">
-                    {Object.entries(call.analysis.agentPerformance).map(([key, value]) => (
-                      <div key={key}>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-600 capitalize">{key}</span>
-                          <span className="font-medium text-gray-900">{value}/10</span>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full ${
-                              value >= 7 ? 'bg-green-500' :
-                              value >= 4 ? 'bg-yellow-500' : 'bg-red-500'
-                            }`}
-                            style={{ width: `${value * 10}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-400">No performance data available</p>
-                )}
-
-                {call.analysis?.actionItems && call.analysis.actionItems.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="text-sm font-medium text-gray-500 mb-3">Action Items</h3>
-                    <ul className="space-y-2">
-                      {call.analysis.actionItems.map((item, index) => (
-                        <li key={index} className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-indigo-600 mt-0.5 flex-shrink-0" />
-                          <span className="text-sm text-gray-700">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                </div>
+                <p className="text-center text-sm text-gray-500 mt-4">
+                  {call.qualityScore && call.qualityScore >= 8 ? 'Excellent call quality' :
+                   call.qualityScore && call.qualityScore >= 6 ? 'Good call quality' :
+                   call.qualityScore && call.qualityScore >= 4 ? 'Average call quality' :
+                   'Needs improvement'}
+                </p>
               </div>
             </div>
-          )}
-
-          {/* Report Tab */}
-          {activeTab === 'report' && (
-            <div>
-              {report ? (
-                <div className="prose max-w-none">
-                  <div 
-                    className="text-gray-700"
-                    dangerouslySetInnerHTML={{ 
-                      __html: report
-                        .replace(/^# /gm, '<h1 class="text-xl font-bold mt-6 mb-3">')
-                        .replace(/^## /gm, '<h2 class="text-lg font-semibold mt-5 mb-2">')
-                        .replace(/^### /gm, '<h3 class="text-base font-medium mt-4 mb-2">')
-                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                        .replace(/^- /gm, '<li class="ml-4">')
-                        .replace(/\n/g, '<br/>')
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 mb-4">No report generated yet</p>
-                  <button
-                    onClick={generateReport}
-                    disabled={isGeneratingReport}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
-                  >
-                    {isGeneratingReport ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="h-4 w-4" />
-                        Generate Report
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

@@ -176,3 +176,7 @@ service-account.json
 google-services.json
 client-secret.json
 *.key
+
+# Uploaded files (local storage fallback)
+public/uploads/
+call-analytics/src/lib/firebase-admin.ts

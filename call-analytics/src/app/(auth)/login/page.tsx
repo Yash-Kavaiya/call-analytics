@@ -27,50 +27,33 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = async (data: LoginFormData, e?: any) => {
-    if (e && e.preventDefault) e.preventDefault();
-    console.error("!!! CLIENT SUBMIT STARTED !!!", data);
-
+  const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     setError(null);
+
     try {
-      console.error("!!! CALLING SIGNIN !!!");
       const result = await signIn('credentials', {
         email: data.email,
         password: data.password,
         redirect: false,
       });
-      console.error("!!! SIGNIN RETURNED !!!", result);
-
-      // Force display result
-      if (result) {
-        setError(JSON.stringify(result, null, 2));
-      } else {
-        setError("RESULT IS NULL/UNDEFINED");
-      }
 
       if (result?.error) {
-        // setError(result.error);
-        console.error("!!! SIGNIN ERROR !!!", result.error);
-      } else {
-        console.error("!!! SIGNIN SUCCESS !!!");
-        // router.push(callbackUrl);
-        // router.refresh();
+        setError(result.error === 'CredentialsSignin' 
+          ? 'Invalid email or password' 
+          : result.error);
+      } else if (result?.ok) {
+        router.push(callbackUrl);
+        router.refresh();
       }
-    } catch (err: any) {
-      console.error("!!! SIGNIN EXCEPTION !!!", err);
-      // alert(`SignIn Error: ${err.message}`);
-      // alert(`SignIn Error: ${err.message}`);
-      setError(`EXCEPTION: ${err.message}`);
-      // setError('An unexpected error occurred. Please try again.');
+    } catch {
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const onErrors = (errors: any) => {
-    console.error('Form validation errors:', errors);
-  };
+
 
   return (
     <div className="w-full max-w-md">
@@ -104,7 +87,7 @@ export default function LoginPage() {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit, onErrors)} className="space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           {/* Email */}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
