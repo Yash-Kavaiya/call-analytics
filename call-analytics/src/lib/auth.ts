@@ -1,11 +1,6 @@
 import { NextAuthOptions } from 'next-auth';
-
-
-
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { adminAuth, adminDb } from './firebase-admin';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from './firebase';
 import { SessionUser, User, Organization } from '@/types';
 
 export const authOptions: NextAuthOptions = {
@@ -18,20 +13,40 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-
-
           throw new Error('Email and password are required');
         }
 
         try {
-          // Sign in with Firebase Auth
-          const userCredential = await signInWithEmailAndPassword(
-            auth,
-            credentials.email,
-            credentials.password
+          // Get user by email from Firebase Admin
+          let firebaseUser;
+          try {
+            firebaseUser = await adminAuth.getUserByEmail(credentials.email);
+          } catch {
+            throw new Error('Invalid email or password');
+          }
+
+          // Verify password by attempting to sign in
+          // Since Firebase Admin doesn't have a direct password verify method,
+          // we'll use the REST API to verify credentials
+          const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+          const response = await fetch(
+            `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                email: credentials.email,
+                password: credentials.password,
+                returnSecureToken: true,
+              }),
+            }
           );
 
-          const firebaseUser = userCredential.user;
+          const data = await response.json();
+          
+          if (!response.ok || data.error) {
+            throw new Error('Invalid email or password');
+          }
 
           // Get user data from Firestore
           const userDoc = await adminDb.collection('users').doc(firebaseUser.uid).get();
