@@ -95,6 +95,16 @@ export default function FilesPage() {
         }),
       });
 
+      if (!createResponse.ok) {
+        const errorText = await createResponse.text();
+        try {
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.error || 'Failed to create call record');
+        } catch {
+          throw new Error(`Server error: ${createResponse.status}`);
+        }
+      }
+
       const createData = await createResponse.json();
       if (!createData.success) {
         throw new Error(createData.error || 'Failed to create call record');
@@ -142,6 +152,16 @@ export default function FilesPage() {
       const processResponse = await fetch(`/api/calls/${callId}/process`, {
         method: 'POST',
       });
+
+      if (!processResponse.ok) {
+        const errorText = await processResponse.text();
+        try {
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.error || 'Processing failed');
+        } catch {
+          throw new Error(`Processing error: ${processResponse.status}`);
+        }
+      }
 
       const processData = await processResponse.json();
 
